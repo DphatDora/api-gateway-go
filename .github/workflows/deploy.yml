@@ -1,0 +1,110 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.0"
+          cache-dependency-path: src/go.sum
+
+      - name: Install dependencies
+        working-directory: ./src
+        run: go mod download
+
+      - name: Build binary
+        working-directory: ./src
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o ../api-gateway-go ./cmd/server
+          ls -lh ../api-gateway-go
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-binary
+          path: api-gateway-go
+
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-binary
+          path: .
+
+      - name: Prepare remote directory & setup systemd service
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: 22
+          script: |
+            mkdir -p /root/service-go/api-gateway-go
+
+            # Create systemd service if not exists
+            if [ ! -f /etc/systemd/system/api-gateway-go.service ]; then
+              cat > /etc/systemd/system/api-gateway-go.service << 'EOF'
+            [Unit]
+            Description=Academy Service
+            After=network.target
+
+            [Service]
+            ExecStart=/root/service-go/api-gateway-go/api-gateway-go
+            WorkingDirectory=/root/service-go/api-gateway-go
+            Restart=always
+            RestartSec=5
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+              systemctl daemon-reload
+              systemctl enable api-gateway-go
+              echo "Systemd service created!"
+            fi
+
+      - name: Upload binary to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: 22
+          source: "api-gateway-go"
+          target: "/root/service-go/api-gateway-go/"
+
+      - name: Set permission & restart service
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: 22
+          script: |
+            cd /root/service-go/api-gateway-go
+            chmod +x api-gateway-go
+            systemctl restart api-gateway-go
+            systemctl status api-gateway-go --no-pager
+
+      - name: Deployment notification
+        run: |
+          echo "Deployment completed successfully!"
+          echo "Environment: Production (VPS)"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
