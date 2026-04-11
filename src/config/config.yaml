@@ -1,0 +1,33 @@
+app:
+  name: api-gateway
+  host: localhost
+  port: 8080
+  debug: true
+  readTimeout: 10
+  writeTimeout: 60
+  whitelist:
+    - http://localhost:3000
+    - http://localhost:5173
+    - https://wetalk-ute.vercel.app
+
+log:
+  level:
+  filePath:
+  maxSizeMB: 10
+  console: true
+  dashboardToken:
+  requestLogPath:
+
+services:
+  - name: wetalk-academy
+    prefix: /academy
+    target: http://localhost:8046/api/v1
+    healthPath: /api/v1/health
+  - name: social-platform
+    prefix: /social
+    target: http://localhost:8045/api/v1
+    healthPath: /api/v1/health
+  - name: social-platform-media
+    prefix: /social-media
+    target: http://localhost:8044/api/v1
+    healthPath: /health

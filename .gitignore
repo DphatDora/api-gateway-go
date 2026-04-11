@@ -1,0 +1,6 @@
+.env
+logs/
+*.exe
+*.log
+/docs
+/src/go.sum

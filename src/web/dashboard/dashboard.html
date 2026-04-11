@@ -1,0 +1,1707 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API Gateway — Dashboard</title>
+    <style>
+      :root[data-theme="dark"] {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --panel-border: #21262d;
+        --text: #e6edf3;
+        --muted: #7d8590;
+        --accent: #388bfd;
+        --accent-hover: #58a6ff;
+        --success: #3fb950;
+        --err: #f85149;
+        --warn: #d29922;
+        --info: #58a6ff;
+        --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        --modal-overlay: rgba(0, 0, 0, 0.75);
+        --input-bg: #0d1117;
+        --scrollbar: #21262d;
+        --scrollbar-thumb: #30363d;
+        --tag-bg: rgba(56, 139, 253, 0.12);
+        --tag-text: #388bfd;
+        --line-hover: rgba(56, 139, 253, 0.08);
+        --line-border: #21262d;
+        --glow-up: 0 0 12px rgba(63, 185, 80, 0.3);
+        --glow-down: 0 0 12px rgba(248, 81, 73, 0.3);
+      }
+      :root[data-theme="light"] {
+        --bg: #f5f7fa;
+        --panel: #ffffff;
+        --panel-border: #d0d7de;
+        --text: #1f2328;
+        --muted: #656d76;
+        --accent: #0969da;
+        --accent-hover: #0550ae;
+        --success: #1f883d;
+        --err: #cf222e;
+        --warn: #9a6700;
+        --info: #0969da;
+        --shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        --modal-overlay: rgba(0, 0, 0, 0.5);
+        --input-bg: #f6f8fa;
+        --scrollbar: #d0d7de;
+        --scrollbar-thumb: #afb8c1;
+        --tag-bg: rgba(9, 105, 218, 0.08);
+        --tag-text: #0969da;
+        --line-hover: rgba(9, 105, 218, 0.06);
+        --line-border: #d0d7de;
+        --glow-up: 0 0 12px rgba(31, 136, 61, 0.2);
+        --glow-down: 0 0 12px rgba(207, 34, 46, 0.2);
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+      }
+      body {
+        font-family:
+          ui-sans-serif,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        transition:
+          background 0.2s,
+          color 0.2s;
+      }
+
+      .layout {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* ── Sidebar ── */
+      .sidebar {
+        width: 260px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 1.1rem 0.9rem;
+        border-right: 1px solid var(--panel-border);
+        background: var(--panel);
+        overflow-y: auto;
+        gap: 0.6rem;
+      }
+      .sidebar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding-bottom: 0.8rem;
+        border-bottom: 1px solid var(--panel-border);
+      }
+      .sidebar-header h1 {
+        font-size: 0.92rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+      .sidebar-header h1 .logo-icon {
+        font-size: 1.05rem;
+      }
+
+      .toggle-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        user-select: none;
+      }
+      .toggle-wrap .toggle-label {
+        font-size: 0.78rem;
+        color: var(--text);
+      }
+      .toggle {
+        position: relative;
+        width: 36px;
+        height: 20px;
+        flex-shrink: 0;
+      }
+      .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
+      }
+      .toggle-track {
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        background: var(--panel-border);
+        transition: background 0.22s;
+        border: 1px solid var(--panel-border);
+      }
+      .toggle input:checked ~ .toggle-track {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .toggle-thumb {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+      }
+      .toggle input:checked ~ .toggle-thumb {
+        transform: translateX(16px);
+      }
+      .theme-toggle-wrap {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        flex-shrink: 0;
+      }
+      .theme-icon {
+        font-size: 0.78rem;
+        line-height: 1;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+      }
+      .field label {
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+      }
+      select {
+        width: 100%;
+        background: var(--input-bg);
+        color: var(--text);
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        padding: 0.38rem 0.55rem;
+        cursor: pointer;
+        font-size: 0.78rem;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237d8590' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.5rem center;
+        padding-right: 1.8rem;
+        transition: border-color 0.15s;
+        font-family: inherit;
+      }
+      select:hover,
+      select:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      input[type="text"] {
+        width: 100%;
+        background: var(--input-bg);
+        color: var(--text);
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        padding: 0.38rem 0.55rem;
+        font-size: 0.78rem;
+        font-family: inherit;
+        transition: border-color 0.15s;
+      }
+      input[type="text"]:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .btn-primary {
+        width: 100%;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 0.42rem 0.55rem;
+        cursor: pointer;
+        font-size: 0.78rem;
+        font-weight: 600;
+        font-family: inherit;
+        transition:
+          background 0.15s,
+          transform 0.1s;
+      }
+      .btn-primary:hover {
+        background: var(--accent-hover);
+      }
+      .btn-primary:active {
+        transform: scale(0.98);
+      }
+
+      .status-box {
+        background: var(--input-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        padding: 0.4rem 0.6rem;
+      }
+      .status {
+        font-size: 0.7rem;
+        color: var(--muted);
+        line-height: 1.4;
+        word-break: break-word;
+      }
+
+      /* ── Tabs ── */
+      .tab-nav {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid var(--panel-border);
+        flex-shrink: 0;
+      }
+      .tab-btn {
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--muted);
+        padding: 0.55rem 0.9rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+      }
+      .tab-btn:hover {
+        color: var(--text);
+      }
+      .tab-btn.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+      .tab-panel {
+        display: none;
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+      }
+      .tab-panel.active {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+        padding: 1rem;
+        gap: 0.6rem;
+      }
+
+      /* ── Service Map ── */
+      .service-map {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.3rem;
+        padding: 1.5rem 1rem;
+      }
+      .gw-node {
+        background: linear-gradient(135deg, var(--accent) 0%, #6c5ce7 100%);
+        color: #fff;
+        padding: 0.8rem 1.8rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(56, 139, 253, 0.3);
+        min-width: 180px;
+      }
+      .gw-node .gw-sub {
+        font-size: 0.68rem;
+        font-weight: 400;
+        opacity: 0.8;
+        margin-top: 0.2rem;
+      }
+      .conn-lines {
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      .conn-line {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .conn-arrow {
+        width: 2px;
+        height: 36px;
+        background: var(--panel-border);
+        position: relative;
+        transition: background 0.3s;
+      }
+      .conn-arrow::after {
+        content: "";
+        position: absolute;
+        bottom: -5px;
+        left: -4px;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 6px solid var(--panel-border);
+        transition: border-top-color 0.3s;
+      }
+      .conn-arrow.up {
+        background: var(--success);
+      }
+      .conn-arrow.up::after {
+        border-top-color: var(--success);
+      }
+      .conn-arrow.down {
+        background: var(--err);
+      }
+      .conn-arrow.down::after {
+        border-top-color: var(--err);
+      }
+      .svc-node {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        padding: 0.8rem 1.2rem;
+        text-align: center;
+        min-width: 160px;
+        transition:
+          box-shadow 0.3s,
+          border-color 0.3s;
+      }
+      .svc-node.up {
+        border-color: var(--success);
+        box-shadow: var(--glow-up);
+      }
+      .svc-node.down {
+        border-color: var(--err);
+        box-shadow: var(--glow-down);
+      }
+      .svc-node.unknown {
+        border-color: var(--warn);
+      }
+      .svc-name {
+        font-weight: 700;
+        font-size: 0.84rem;
+        margin-bottom: 0.25rem;
+      }
+      .svc-prefix {
+        font-size: 0.68rem;
+        color: var(--muted);
+        font-family: ui-monospace, monospace;
+        margin-bottom: 0.25rem;
+      }
+      .svc-badge {
+        display: inline-block;
+        font-size: 0.62rem;
+        font-weight: 700;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+      .svc-badge.up {
+        background: rgba(63, 185, 80, 0.15);
+        color: var(--success);
+      }
+      .svc-badge.down {
+        background: rgba(248, 81, 73, 0.15);
+        color: var(--err);
+      }
+      .svc-badge.unknown {
+        background: rgba(210, 153, 34, 0.15);
+        color: var(--warn);
+      }
+      .svc-latency {
+        font-size: 0.66rem;
+        color: var(--muted);
+        margin-top: 0.2rem;
+      }
+
+      /* ── Metrics cards ── */
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 0.6rem;
+        padding: 0.8rem 0;
+      }
+      .metrics-card {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        padding: 0.75rem 0.9rem;
+      }
+      .metrics-title {
+        font-size: 0.7rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+      }
+      .metrics-items {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.4rem 0.7rem;
+      }
+      .metric-item {
+        font-size: 0.75rem;
+        line-height: 1.3;
+      }
+      .metric-label {
+        color: var(--muted);
+        font-size: 0.68rem;
+      }
+      .metric-value {
+        font-weight: 700;
+        font-size: 0.92rem;
+        color: var(--text);
+        margin-top: 0.05rem;
+      }
+
+      /* ── Table ── */
+      .table-wrap {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-thumb) var(--scrollbar);
+      }
+      .table-wrap::-webkit-scrollbar {
+        width: 6px;
+      }
+      .table-wrap::-webkit-scrollbar-track {
+        background: var(--scrollbar);
+      }
+      .table-wrap::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb);
+        border-radius: 3px;
+      }
+
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.74rem;
+      }
+      .data-table thead {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+      }
+      .data-table th {
+        background: var(--panel);
+        border-bottom: 1px solid var(--panel-border);
+        padding: 0.45rem 0.6rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+      }
+      .data-table td {
+        padding: 0.38rem 0.6rem;
+        border-bottom: 1px solid var(--line-border);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.72rem;
+      }
+      .data-table tbody tr {
+        cursor: pointer;
+        transition: background 0.12s;
+      }
+      .data-table tbody tr:hover td {
+        background: var(--line-hover);
+      }
+
+      .method-badge {
+        display: inline-block;
+        font-size: 0.6rem;
+        font-weight: 700;
+        padding: 0.06rem 0.3rem;
+        border-radius: 3px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .method-GET {
+        background: rgba(63, 185, 80, 0.15);
+        color: var(--success);
+      }
+      .method-POST {
+        background: rgba(56, 139, 253, 0.15);
+        color: var(--info);
+      }
+      .method-PUT {
+        background: rgba(210, 153, 34, 0.15);
+        color: var(--warn);
+      }
+      .method-PATCH {
+        background: rgba(210, 153, 34, 0.15);
+        color: var(--warn);
+      }
+      .method-DELETE {
+        background: rgba(248, 81, 73, 0.15);
+        color: var(--err);
+      }
+
+      .status-code {
+        font-weight: 700;
+      }
+      .status-2xx {
+        color: var(--success);
+      }
+      .status-3xx {
+        color: var(--info);
+      }
+      .status-4xx {
+        color: var(--warn);
+      }
+      .status-5xx {
+        color: var(--err);
+      }
+      .svc-tag {
+        font-size: 0.62rem;
+        font-weight: 600;
+        padding: 0.06rem 0.35rem;
+        border-radius: 3px;
+        background: var(--tag-bg);
+        color: var(--tag-text);
+        white-space: nowrap;
+      }
+
+      /* ── Log viewer ── */
+      .log-line {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.72rem;
+        padding: 0.25rem 0.6rem;
+        border-bottom: 1px solid var(--line-border);
+        line-height: 1.45;
+        cursor: pointer;
+        transition: background 0.12s;
+        word-break: break-all;
+      }
+      .log-line:hover {
+        background: var(--line-hover);
+      }
+      .log-level {
+        font-weight: 700;
+        padding: 0.06rem 0.3rem;
+        border-radius: 3px;
+        font-size: 0.6rem;
+        margin-right: 0.4rem;
+        display: inline-block;
+        min-width: 38px;
+        text-align: center;
+      }
+      .log-level-DEBUG {
+        background: rgba(56, 139, 253, 0.12);
+        color: var(--info);
+      }
+      .log-level-INFO {
+        background: rgba(63, 185, 80, 0.12);
+        color: var(--success);
+      }
+      .log-level-WARN {
+        background: rgba(210, 153, 34, 0.12);
+        color: var(--warn);
+      }
+      .log-level-ERROR {
+        background: rgba(248, 81, 73, 0.12);
+        color: var(--err);
+      }
+      .log-msg {
+        color: var(--text);
+      }
+      .log-time {
+        color: var(--muted);
+        margin-right: 0.5rem;
+      }
+
+      /* ── Sidebar extras ── */
+      .api-endpoints {
+        margin-top: auto;
+        padding-top: 0.6rem;
+        border-top: 1px solid var(--panel-border);
+      }
+      .api-endpoints-label {
+        font-size: 0.64rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        margin-bottom: 0.35rem;
+      }
+      .api-endpoints-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .api-endpoints-list code {
+        background: var(--tag-bg);
+        color: var(--tag-text);
+        padding: 0.15rem 0.35rem;
+        border-radius: 3px;
+        font-family: ui-monospace, monospace;
+        font-size: 0.64rem;
+        word-break: break-all;
+      }
+
+      /* ── Modal ── */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: var(--modal-overlay);
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        backdrop-filter: blur(4px);
+      }
+      .modal-overlay.open {
+        display: flex;
+      }
+      .modal-panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        width: min(720px, 100%);
+        max-height: min(88vh, 100%);
+        display: flex;
+        flex-direction: column;
+        box-shadow: var(--shadow);
+        animation: modal-in 0.18s ease;
+      }
+      @keyframes modal-in {
+        from {
+          opacity: 0;
+          transform: scale(0.96) translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+      .modal-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.8rem 1.1rem;
+        border-bottom: 1px solid var(--panel-border);
+        flex-shrink: 0;
+      }
+      .modal-title {
+        font-size: 0.84rem;
+        font-weight: 700;
+      }
+      .modal-close {
+        background: transparent;
+        border: 1px solid var(--panel-border);
+        color: var(--muted);
+        font-size: 0.88rem;
+        cursor: pointer;
+        padding: 0.2rem 0.45rem;
+        border-radius: 5px;
+        transition:
+          border-color 0.15s,
+          color 0.15s;
+        font-family: inherit;
+      }
+      .modal-close:hover {
+        border-color: var(--err);
+        color: var(--err);
+      }
+      .modal-body {
+        padding: 1rem;
+        overflow: auto;
+        flex: 1;
+        min-height: 0;
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-thumb) var(--scrollbar);
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        gap: 0.3rem 0.65rem;
+        font-size: 0.76rem;
+      }
+      .detail-label {
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding-top: 0.08rem;
+      }
+      .detail-value {
+        font-family: ui-monospace, monospace;
+        font-size: 0.74rem;
+        word-break: break-all;
+      }
+      .detail-section {
+        margin-top: 0.8rem;
+        margin-bottom: 0.4rem;
+        font-weight: 700;
+        font-size: 0.74rem;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--panel-border);
+        padding-bottom: 0.25rem;
+      }
+      .header-row {
+        display: flex;
+        gap: 0.4rem;
+        font-family: ui-monospace, monospace;
+        font-size: 0.7rem;
+        padding: 0.18rem 0;
+        border-bottom: 1px solid var(--line-border);
+      }
+      .header-key {
+        color: var(--accent);
+        font-weight: 600;
+        min-width: 130px;
+        flex-shrink: 0;
+      }
+      .header-val {
+        color: var(--text);
+        word-break: break-all;
+      }
+
+      /* ── Log detail modal ── */
+      .log-json {
+        background: var(--input-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        padding: 0.8rem;
+        font-family: ui-monospace, monospace;
+        font-size: 0.72rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-all;
+        overflow-x: auto;
+        color: var(--text);
+      }
+
+      /* ── Sidebar section visibility ── */
+      .sidebar-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+      .sidebar-section.hidden {
+        display: none;
+      }
+
+      @media (max-width: 900px) {
+        .conn-lines {
+          flex-direction: column;
+          align-items: center;
+        }
+        .metrics-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @keyframes pulse-dot {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+      .pulse {
+        animation: pulse-dot 2s ease-in-out infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h1><span class="logo-icon">⚡</span> API Gateway</h1>
+          <div class="theme-toggle-wrap">
+            <span class="theme-icon">🌙</span>
+            <label class="toggle" title="Toggle theme"
+              ><input type="checkbox" id="themeToggle" /><span
+                class="toggle-track"
+              ></span
+              ><span class="toggle-thumb"></span
+            ></label>
+            <span class="theme-icon">☀️</span>
+          </div>
+        </div>
+
+        <!-- Request Monitor Controls -->
+        <div class="sidebar-section" id="sidebarReq">
+          <div class="field">
+            <label>Request limit</label
+            ><select id="limitSel">
+              <option value="50">50</option>
+              <option value="100" selected>100</option>
+              <option value="200">200</option>
+              <option value="500">500</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Filter service</label
+            ><select id="filterService">
+              <option value="">All services</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Filter status</label
+            ><select id="filterStatus">
+              <option value="">All statuses</option>
+              <option value="2xx">2xx</option>
+              <option value="3xx">3xx</option>
+              <option value="4xx">4xx</option>
+              <option value="5xx">5xx</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Log Monitor Controls -->
+        <div class="sidebar-section hidden" id="sidebarLog">
+          <div class="field">
+            <label>Log file</label
+            ><select id="logFileSel">
+              <option value="">Active log</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Log level</label
+            ><select id="logLevelSel">
+              <option value="">All levels</option>
+              <option value="DEBUG">DEBUG</option>
+              <option value="INFO">INFO</option>
+              <option value="WARN">WARN</option>
+              <option value="ERROR">ERROR</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Lines</label
+            ><select id="logLinesSel">
+              <option value="100">100</option>
+              <option value="200" selected>200</option>
+              <option value="500">500</option>
+              <option value="1000">1000</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Search</label
+            ><input
+              type="text"
+              id="logSearchInput"
+              placeholder="Search logs…"
+            />
+          </div>
+        </div>
+
+        <div class="field">
+          <button type="button" class="btn-primary" id="refreshBtn">
+            ↻ Refresh
+          </button>
+        </div>
+        <div class="field">
+          <label class="toggle-wrap"
+            ><span class="toggle"
+              ><input type="checkbox" id="autoRefresh" /><span
+                class="toggle-track"
+              ></span
+              ><span class="toggle-thumb"></span></span
+            ><span class="toggle-label">Auto-refresh (3s)</span></label
+          >
+        </div>
+        <div class="status-box">
+          <span class="status" id="status">Loading…</span>
+        </div>
+
+        <div class="api-endpoints">
+          <div class="api-endpoints-label">API Endpoints</div>
+          <div class="api-endpoints-list">
+            <code>/gateway/api/services</code>
+            <code>/gateway/api/metrics</code>
+            <code>/gateway/api/requests</code>
+            <code>/gateway/api/logs</code>
+            <code>/gateway/health</code>
+          </div>
+        </div>
+      </aside>
+
+      <div class="main">
+        <div class="tab-nav">
+          <button class="tab-btn active" data-tab="map">Service Map</button>
+          <button class="tab-btn" data-tab="requests">Request Monitor</button>
+          <button class="tab-btn" data-tab="logs">Log Monitor</button>
+        </div>
+
+        <!-- Tab: Service Map -->
+        <div class="tab-panel active" id="tab-map">
+          <div class="service-map">
+            <div class="gw-node">
+              <div>⚡ API Gateway</div>
+              <div class="gw-sub" id="gwPort">:8080</div>
+            </div>
+            <div class="conn-lines" id="connLines"></div>
+          </div>
+          <div class="metrics-grid" id="metricsGrid"></div>
+        </div>
+
+        <!-- Tab: Request Monitor -->
+        <div class="tab-panel" id="tab-requests">
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Method</th>
+                  <th>Path</th>
+                  <th>Service</th>
+                  <th>Status</th>
+                  <th>Latency</th>
+                  <th>Client IP</th>
+                </tr>
+              </thead>
+              <tbody id="reqTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab: Log Monitor -->
+        <div class="tab-panel" id="tab-logs">
+          <div class="table-wrap" id="logContainer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal-panel">
+        <div class="modal-head">
+          <span class="modal-title" id="modalTitle">Detail</span
+          ><button type="button" class="modal-close" id="modalClose">
+            ✕ Close
+          </button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        /* ── Theme ── */
+        var root = document.documentElement,
+          themeToggle = document.getElementById("themeToggle");
+        var theme = localStorage.getItem("gwDashTheme") || "dark";
+        applyTheme(theme);
+        themeToggle.addEventListener("change", function () {
+          theme = themeToggle.checked ? "light" : "dark";
+          applyTheme(theme);
+          localStorage.setItem("gwDashTheme", theme);
+        });
+        function applyTheme(t) {
+          root.setAttribute("data-theme", t);
+          themeToggle.checked = t === "light";
+        }
+
+        /* ── Token ── */
+        var params = new URLSearchParams(location.search);
+        var token = params.get("token");
+        if (token) sessionStorage.setItem("gwDashboardToken", token);
+        else token = sessionStorage.getItem("gwDashboardToken");
+
+        /* ── DOM refs ── */
+        var statusEl = document.getElementById("status");
+        var limitSel = document.getElementById("limitSel"),
+          filterService = document.getElementById("filterService"),
+          filterStatus = document.getElementById("filterStatus");
+        var refreshBtn = document.getElementById("refreshBtn"),
+          autoRefreshInput = document.getElementById("autoRefresh");
+        var connLines = document.getElementById("connLines"),
+          metricsGrid = document.getElementById("metricsGrid"),
+          reqTableBody = document.getElementById("reqTableBody");
+        var logContainer = document.getElementById("logContainer");
+        var logFileSel = document.getElementById("logFileSel"),
+          logLevelSel = document.getElementById("logLevelSel"),
+          logLinesSel = document.getElementById("logLinesSel"),
+          logSearchInput = document.getElementById("logSearchInput");
+        var modalOverlay = document.getElementById("modalOverlay"),
+          modalBody = document.getElementById("modalBody"),
+          modalClose = document.getElementById("modalClose"),
+          modalTitle = document.getElementById("modalTitle");
+        var sidebarReq = document.getElementById("sidebarReq"),
+          sidebarLog = document.getElementById("sidebarLog");
+
+        var timer = null,
+          cachedRequests = [],
+          knownServiceNames = [],
+          activeTab = "map";
+
+        /* ── Tabs ── */
+        document.querySelectorAll(".tab-btn").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            document.querySelectorAll(".tab-btn").forEach(function (b) {
+              b.classList.remove("active");
+            });
+            document.querySelectorAll(".tab-panel").forEach(function (p) {
+              p.classList.remove("active");
+            });
+            btn.classList.add("active");
+            activeTab = btn.dataset.tab;
+            document.getElementById("tab-" + activeTab).classList.add("active");
+            // Toggle sidebar sections
+            sidebarReq.classList.toggle("hidden", activeTab === "logs");
+            sidebarLog.classList.toggle("hidden", activeTab !== "logs");
+
+            if (activeTab === "logs") {
+              lastLogSig = "";
+              loadLogs();
+            } else if (activeTab === "requests") {
+              loadRequests();
+            } else if (activeTab === "map") {
+              loadServices();
+              loadMetrics();
+            }
+          });
+        });
+
+        /* ── Modal ── */
+        modalClose.addEventListener("click", function () {
+          modalOverlay.classList.remove("open");
+        });
+        modalOverlay.addEventListener("click", function (e) {
+          if (e.target === modalOverlay) modalOverlay.classList.remove("open");
+        });
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") modalOverlay.classList.remove("open");
+        });
+
+        /* ── Helpers ── */
+        function apiUrl(path) {
+          var q = path.indexOf("?") >= 0 ? "&" : "?";
+          return path + q + "token=" + encodeURIComponent(token || "");
+        }
+        function esc(s) {
+          if (typeof s !== "string") s = String(s || "");
+          var d = document.createElement("div");
+          d.textContent = s;
+          return d.innerHTML;
+        }
+        function formatBytes(n) {
+          n = Number(n || 0);
+          if (n < 1024) return n + " B";
+          if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+          return (n / 1048576).toFixed(2) + " MB";
+        }
+        function statusClass(c) {
+          if (c >= 200 && c < 300) return "status-2xx";
+          if (c >= 300 && c < 400) return "status-3xx";
+          if (c >= 400 && c < 500) return "status-4xx";
+          return "status-5xx";
+        }
+        function statusRange(c) {
+          if (c >= 200 && c < 300) return "2xx";
+          if (c >= 300 && c < 400) return "3xx";
+          if (c >= 400 && c < 500) return "4xx";
+          return "5xx";
+        }
+        function updateVal(id, v) {
+          var el = document.getElementById(id);
+          if (el) {
+            var s = String(v);
+            if (el.textContent !== s) el.textContent = s;
+          }
+        }
+        function mi(id, label, value) {
+          return (
+            '<div class="metric-item"><div class="metric-label">' +
+            label +
+            '</div><div class="metric-value" id="' +
+            id +
+            '">' +
+            value +
+            "</div></div>"
+          );
+        }
+
+        /* ── Load services + service map ── */
+        async function loadServices() {
+          try {
+            var res = await fetch(apiUrl("/gateway/api/services"));
+            if (!res.ok) return;
+            var data = await res.json();
+            var services = data.services || [];
+
+            // Track known service names for metrics
+            knownServiceNames = services.map(function (s) {
+              return s.name;
+            });
+
+            // Update filter dropdown
+            var prevFilter = filterService.value;
+            var existing = new Set();
+            for (var i = 0; i < filterService.options.length; i++)
+              existing.add(filterService.options[i].value);
+            services.forEach(function (svc) {
+              if (!existing.has(svc.name)) {
+                var o = document.createElement("option");
+                o.value = svc.name;
+                o.textContent = svc.name;
+                filterService.appendChild(o);
+              }
+            });
+            if (prevFilter) filterService.value = prevFilter;
+
+            // In-place update service map
+            services.forEach(function (svc) {
+              var s = (svc.status || "unknown").toLowerCase();
+              var conn = document.getElementById("svc-conn-" + svc.name);
+              if (conn) {
+                var ar = conn.querySelector(".conn-arrow");
+                if (ar) ar.className = "conn-arrow " + s;
+                var nd = conn.querySelector(".svc-node");
+                if (nd) nd.className = "svc-node " + s;
+                var bg = conn.querySelector(".svc-badge");
+                if (bg) {
+                  bg.className = "svc-badge " + s;
+                  bg.textContent = svc.status || "UNKNOWN";
+                }
+                var lt = conn.querySelector(".svc-latency");
+                if (lt) {
+                  lt.textContent =
+                    svc.response_time_ms > 0
+                      ? svc.response_time_ms + " ms"
+                      : svc.error || "";
+                  lt.style.color = svc.error ? "var(--err)" : "";
+                }
+              } else {
+                var d = document.createElement("div");
+                d.className = "conn-line";
+                d.id = "svc-conn-" + svc.name;
+                d.innerHTML =
+                  '<div class="conn-arrow ' +
+                  s +
+                  '"></div><div class="svc-node ' +
+                  s +
+                  '"><div class="svc-name">' +
+                  esc(svc.name) +
+                  '</div><div class="svc-prefix">' +
+                  esc(svc.prefix) +
+                  " → " +
+                  esc(svc.target) +
+                  '</div><span class="svc-badge ' +
+                  s +
+                  '">' +
+                  esc(svc.status || "UNKNOWN") +
+                  '</span><div class="svc-latency">' +
+                  (svc.response_time_ms > 0
+                    ? svc.response_time_ms + " ms"
+                    : svc.error
+                      ? esc(svc.error)
+                      : "") +
+                  "</div></div>";
+                connLines.appendChild(d);
+              }
+            });
+          } catch (e) {
+            /* ignore */
+          }
+        }
+
+        /* ── Load metrics ── */
+        var metricsInitialized = false;
+        async function loadMetrics() {
+          try {
+            var res = await fetch(apiUrl("/gateway/api/metrics"));
+            if (!res.ok) return;
+            var data = await res.json();
+            var sys = data.system || {},
+              mem = sys.memory || {};
+            var services = (data.services || []).filter(function (s) {
+              return s.name !== "gateway";
+            });
+            var total = data.total || {};
+
+            // Build a lookup map
+            var svcMap = {};
+            services.forEach(function (s) {
+              svcMap[s.name] = s;
+            });
+
+            if (!metricsInitialized) {
+              metricsGrid.innerHTML = "";
+              // System card
+              metricsGrid.innerHTML +=
+                '<section class="metrics-card"><div class="metrics-title">System</div><div class="metrics-items">' +
+                mi("mc-sys-goroutine", "Goroutines", sys.num_goroutine || 0) +
+                mi("mc-sys-uptime", "Uptime", esc(sys.uptime || "-")) +
+                mi("mc-sys-alloc", "Alloc", formatBytes(mem.alloc_bytes)) +
+                mi(
+                  "mc-sys-heap",
+                  "Heap InUse",
+                  formatBytes(mem.heap_inuse_bytes),
+                ) +
+                mi("mc-sys-gc", "GC Count", mem.num_gc || 0) +
+                mi(
+                  "mc-sys-stack",
+                  "Stack InUse",
+                  formatBytes(mem.stack_inuse_bytes),
+                ) +
+                "</div></section>";
+              // Total card
+              metricsGrid.innerHTML +=
+                '<section class="metrics-card"><div class="metrics-title">Total (last 60s)</div><div class="metrics-items">' +
+                mi("mc-tot-rpm", "Req/Min", total.requests_per_min || 0) +
+                mi("mc-tot-count", "Total Requests", total.request_count || 0) +
+                mi(
+                  "mc-tot-avg",
+                  "Avg Latency",
+                  (total.avg_latency_ms || 0).toFixed(2) + " ms",
+                ) +
+                "</div></section>";
+              // Per-service cards — use knownServiceNames so cards always show
+              knownServiceNames.forEach(function (name) {
+                var svc = svcMap[name] || {
+                  name: name,
+                  request_count: 0,
+                  requests_per_min: 0,
+                  avg_latency_ms: 0,
+                  min_latency_ms: 0,
+                  max_latency_ms: 0,
+                  status_2xx: 0,
+                  status_3xx: 0,
+                  status_4xx: 0,
+                  status_5xx: 0,
+                };
+                metricsGrid.innerHTML +=
+                  '<section class="metrics-card"><div class="metrics-title">' +
+                  esc(svc.name) +
+                  '</div><div class="metrics-items">' +
+                  mi(
+                    "mc-" + svc.name + "-count",
+                    "Requests",
+                    svc.request_count || 0,
+                  ) +
+                  mi(
+                    "mc-" + svc.name + "-rpm",
+                    "Req/Min",
+                    svc.requests_per_min || 0,
+                  ) +
+                  mi(
+                    "mc-" + svc.name + "-avg",
+                    "Avg Latency",
+                    (svc.avg_latency_ms || 0).toFixed(2) + " ms",
+                  ) +
+                  mi(
+                    "mc-" + svc.name + "-minmax",
+                    "Min/Max",
+                    (svc.min_latency_ms || 0).toFixed(2) +
+                      "/" +
+                      (svc.max_latency_ms || 0).toFixed(2) +
+                      " ms",
+                  ) +
+                  mi(
+                    "mc-" + svc.name + "-2xx3xx",
+                    "2xx / 3xx",
+                    (svc.status_2xx || 0) + " / " + (svc.status_3xx || 0),
+                  ) +
+                  mi(
+                    "mc-" + svc.name + "-4xx5xx",
+                    "4xx / 5xx",
+                    (svc.status_4xx || 0) + " / " + (svc.status_5xx || 0),
+                  ) +
+                  "</div></section>";
+              });
+              metricsInitialized = true;
+            } else {
+              // In-place value updates
+              updateVal("mc-sys-goroutine", sys.num_goroutine || 0);
+              updateVal("mc-sys-uptime", sys.uptime || "-");
+              updateVal("mc-sys-alloc", formatBytes(mem.alloc_bytes));
+              updateVal("mc-sys-heap", formatBytes(mem.heap_inuse_bytes));
+              updateVal("mc-sys-gc", mem.num_gc || 0);
+              updateVal("mc-sys-stack", formatBytes(mem.stack_inuse_bytes));
+              updateVal("mc-tot-rpm", total.requests_per_min || 0);
+              updateVal("mc-tot-count", total.request_count || 0);
+              updateVal(
+                "mc-tot-avg",
+                (total.avg_latency_ms || 0).toFixed(2) + " ms",
+              );
+              knownServiceNames.forEach(function (name) {
+                var svc = svcMap[name] || {};
+                updateVal("mc-" + name + "-count", svc.request_count || 0);
+                updateVal("mc-" + name + "-rpm", svc.requests_per_min || 0);
+                updateVal(
+                  "mc-" + name + "-avg",
+                  (svc.avg_latency_ms || 0).toFixed(2) + " ms",
+                );
+                updateVal(
+                  "mc-" + name + "-minmax",
+                  (svc.min_latency_ms || 0).toFixed(2) +
+                    "/" +
+                    (svc.max_latency_ms || 0).toFixed(2) +
+                    " ms",
+                );
+                updateVal(
+                  "mc-" + name + "-2xx3xx",
+                  (svc.status_2xx || 0) + " / " + (svc.status_3xx || 0),
+                );
+                updateVal(
+                  "mc-" + name + "-4xx5xx",
+                  (svc.status_4xx || 0) + " / " + (svc.status_5xx || 0),
+                );
+              });
+            }
+          } catch (e) {
+            /* ignore */
+          }
+        }
+
+        /* ── Load requests ── */
+        async function loadRequests() {
+          try {
+            var res = await fetch(
+              apiUrl("/gateway/api/requests?limit=" + limitSel.value),
+            );
+            if (!res.ok) return;
+            var data = await res.json();
+            var requests = (cachedRequests = data.requests || []);
+            var svcF = filterService.value,
+              stF = filterStatus.value;
+            if (svcF)
+              requests = requests.filter(function (r) {
+                return r.service === svcF;
+              });
+            if (stF)
+              requests = requests.filter(function (r) {
+                return statusRange(r.status_code) === stF;
+              });
+
+            // Smart diff: check if data changed
+            var newSig = requests
+              .map(function (r) {
+                return r.timestamp + r.method + r.path + r.status_code;
+              })
+              .join("|");
+            var oldRows = reqTableBody.querySelectorAll("tr");
+            var oldSig = Array.from(oldRows)
+              .map(function (tr) {
+                return tr.dataset.sig || "";
+              })
+              .join("|");
+            if (newSig === oldSig) return;
+
+            reqTableBody.innerHTML = "";
+            requests.forEach(function (r, idx) {
+              var tr = document.createElement("tr");
+              tr.dataset.sig = r.timestamp + r.method + r.path + r.status_code;
+              tr.dataset.idx = idx;
+              var t = r.timestamp
+                ? r.timestamp.replace("T", " ").replace("Z", "")
+                : "";
+              var st = t.length > 19 ? t.substring(0, 19) : t;
+              tr.innerHTML =
+                "<td>" +
+                esc(st) +
+                '</td><td><span class="method-badge method-' +
+                esc(r.method) +
+                '">' +
+                esc(r.method) +
+                "</span></td><td>" +
+                esc(r.path) +
+                (r.query_string
+                  ? '<span style="color:var(--muted)">?' +
+                    esc(r.query_string) +
+                    "</span>"
+                  : "") +
+                '</td><td><span class="svc-tag">' +
+                esc(r.service) +
+                '</span></td><td><span class="status-code ' +
+                statusClass(r.status_code) +
+                '">' +
+                r.status_code +
+                "</span></td><td>" +
+                (r.latency_ms || 0) +
+                " ms</td><td>" +
+                esc(r.client_ip || "") +
+                "</td>";
+              reqTableBody.appendChild(tr);
+            });
+          } catch (e) {
+            /* ignore */
+          }
+        }
+
+        // Click request row → modal
+        reqTableBody.addEventListener("click", function (e) {
+          var tr = e.target.closest("tr");
+          if (!tr) return;
+          var idx = parseInt(tr.dataset.idx, 10);
+          var reqs = cachedRequests;
+          var svcF = filterService.value,
+            stF = filterStatus.value;
+          if (svcF)
+            reqs = reqs.filter(function (r) {
+              return r.service === svcF;
+            });
+          if (stF)
+            reqs = reqs.filter(function (r) {
+              return statusRange(r.status_code) === stF;
+            });
+          if (!isNaN(idx) && reqs[idx]) openRequestDetail(reqs[idx]);
+        });
+
+        function openRequestDetail(req) {
+          modalTitle.textContent = "Request Detail";
+          var h = '<div class="detail-grid">';
+          h += dr("Timestamp", req.timestamp || "");
+          h += dr(
+            "Method",
+            '<span class="method-badge method-' +
+              esc(req.method) +
+              '">' +
+              esc(req.method) +
+              "</span>",
+          );
+          h += dr("Path", esc(req.path));
+          if (req.query_string) h += dr("Query", esc(req.query_string));
+          h += dr(
+            "Service",
+            '<span class="svc-tag">' + esc(req.service) + "</span>",
+          );
+          h += dr(
+            "Status",
+            '<span class="status-code ' +
+              statusClass(req.status_code) +
+              '">' +
+              req.status_code +
+              "</span>",
+          );
+          h += dr("Latency", (req.latency_ms || 0) + " ms");
+          h += dr("Client IP", esc(req.client_ip || ""));
+          h += "</div>";
+          if (req.headers && Object.keys(req.headers).length > 0) {
+            h += '<div class="detail-section">Request Headers</div>';
+            Object.keys(req.headers)
+              .sort()
+              .forEach(function (k) {
+                h +=
+                  '<div class="header-row"><span class="header-key">' +
+                  esc(k) +
+                  '</span><span class="header-val">' +
+                  esc(req.headers[k]) +
+                  "</span></div>";
+              });
+          }
+          modalBody.innerHTML = h;
+          modalOverlay.classList.add("open");
+        }
+        function dr(label, val) {
+          return (
+            '<div class="detail-label">' +
+            esc(label) +
+            '</div><div class="detail-value">' +
+            val +
+            "</div>"
+          );
+        }
+
+        /* ── Load logs ── */
+        var logFilesLoaded = false;
+        async function loadLogFiles() {
+          if (logFilesLoaded) return;
+          try {
+            var res = await fetch(apiUrl("/gateway/api/logs/files"));
+            if (!res.ok) return;
+            var data = await res.json();
+            var files = data.files || [];
+            logFileSel.innerHTML = "";
+            files.forEach(function (f) {
+              var o = document.createElement("option");
+              o.value = f.name;
+              o.textContent =
+                f.name +
+                (f.current ? " (active)" : "") +
+                " — " +
+                formatBytes(f.size);
+              logFileSel.appendChild(o);
+            });
+            logFilesLoaded = true;
+          } catch (e) {
+            /* ignore */
+          }
+        }
+
+        var lastLogSig = "";
+        async function loadLogs() {
+          await loadLogFiles();
+          try {
+            var file = logFileSel.value,
+              level = logLevelSel.value,
+              lines = logLinesSel.value,
+              search = logSearchInput.value;
+            var url = "/gateway/api/logs?lines=" + lines;
+            if (file) url += "&file=" + encodeURIComponent(file);
+            if (level) url += "&level=" + encodeURIComponent(level);
+            if (search) url += "&search=" + encodeURIComponent(search);
+            var res = await fetch(apiUrl(url));
+            if (!res.ok) return;
+            var data = await res.json();
+            var logLines = data.lines || [];
+
+            // Diff check
+            var sig =
+              logLines.length +
+              "|" +
+              (logLines[0] || "") +
+              "|" +
+              (logLines[logLines.length - 1] || "");
+            if (sig === lastLogSig) return;
+            lastLogSig = sig;
+
+            logContainer.innerHTML = "";
+            logLines.forEach(function (line, idx) {
+              var parsed = tryParseJSON(line);
+              var div = document.createElement("div");
+              div.className = "log-line";
+              div.dataset.idx = idx;
+              div.dataset.raw = line;
+
+              if (parsed) {
+                var lv = (parsed.level || "").toUpperCase();
+                var time = parsed.time || "";
+                if (time.length > 19) time = time.substring(11, 19);
+                var msg = parsed.msg || "";
+                div.innerHTML =
+                  '<span class="log-time">' +
+                  esc(time) +
+                  '</span><span class="log-level log-level-' +
+                  lv +
+                  '">' +
+                  lv +
+                  '</span><span class="log-msg">' +
+                  esc(msg) +
+                  "</span>";
+              } else {
+                div.textContent = line;
+              }
+              logContainer.appendChild(div);
+            });
+          } catch (e) {
+            /* ignore */
+          }
+        }
+
+        // Click log line → modal with raw JSON
+        logContainer.addEventListener("click", function (e) {
+          var line = e.target.closest(".log-line");
+          if (!line) return;
+          var raw = line.dataset.raw || "";
+          modalTitle.textContent = "Log Entry";
+          var parsed = tryParseJSON(raw);
+          if (parsed) {
+            modalBody.innerHTML =
+              '<pre class="log-json">' +
+              esc(JSON.stringify(parsed, null, 2)) +
+              "</pre>";
+          } else {
+            modalBody.innerHTML =
+              '<pre class="log-json">' + esc(raw) + "</pre>";
+          }
+          modalOverlay.classList.add("open");
+        });
+
+        function tryParseJSON(s) {
+          try {
+            return JSON.parse(s);
+          } catch (e) {
+            return null;
+          }
+        }
+
+        /* ── Refresh ── */
+        async function refreshAll() {
+          if (!token) {
+            statusEl.textContent =
+              "Missing token. Open /gateway/dashboard?token=YOUR_TOKEN";
+            return;
+          }
+          // Always load services first (for knownServiceNames)
+          await loadServices();
+          if (activeTab === "logs") {
+            await loadLogs();
+          } else {
+            await Promise.all([loadMetrics(), loadRequests()]);
+          }
+          statusEl.textContent = "Updated — " + new Date().toLocaleTimeString();
+        }
+
+        /* ── Events ── */
+        refreshBtn.addEventListener("click", refreshAll);
+        limitSel.addEventListener("change", loadRequests);
+        filterService.addEventListener("change", loadRequests);
+        filterStatus.addEventListener("change", loadRequests);
+        logFileSel.addEventListener("change", function () {
+          lastLogSig = "";
+          loadLogs();
+        });
+        logLevelSel.addEventListener("change", function () {
+          lastLogSig = "";
+          loadLogs();
+        });
+        logLinesSel.addEventListener("change", function () {
+          lastLogSig = "";
+          loadLogs();
+        });
+        logSearchInput.addEventListener("keyup", function (e) {
+          if (e.key === "Enter") {
+            lastLogSig = "";
+            loadLogs();
+          }
+        });
+
+        autoRefreshInput.addEventListener("change", function () {
+          if (timer) {
+            clearInterval(timer);
+            timer = null;
+          }
+          if (autoRefreshInput.checked) timer = setInterval(refreshAll, 3000);
+        });
+
+        /* ── Init ── */
+        (async function () {
+          if (!token) {
+            statusEl.textContent =
+              "Missing token. Open /gateway/dashboard?token=YOUR_TOKEN";
+            return;
+          }
+          await refreshAll();
+        })();
+      })();
+    </script>
+  </body>
+</html>
