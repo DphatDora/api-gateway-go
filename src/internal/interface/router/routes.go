@@ -9,20 +9,25 @@ import (
 	"api-gateway/internal/interface/middleware"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
-// SetupRoutes configures all gateway routes: CORS, dashboard, and reverse proxy.
+// SetupRoutes configures all gateway routes: CORS, rate limiting, caching, dashboard, and reverse proxy.
 func SetupRoutes(
 	conf *config.Config,
 	proxies []*gateway.ServiceProxy,
 	healthChecker *gateway.HealthChecker,
 	metricsCollector *gateway.MetricsCollector,
+	redisClient *redis.Client,
 ) *gin.Engine {
 	router := gin.Default()
 
-	// Global middleware
+	// Global middleware — order matters:
+	// CORS → RateLimit → ForwardingHeaders → Cache → RequestLogger → (proxy handlers)
 	router.Use(middleware.CORSMiddleware(conf.App.Whitelist))
+	router.Use(middleware.NewRateLimiter(redisClient, conf.RateLimit).Handler())
 	router.Use(middleware.ForwardingMiddleware())
+	router.Use(middleware.NewResponseCache(redisClient, conf.Cache).Handler())
 
 	// Service resolver: maps request path to service name
 	serviceResolver := func(path string) string {

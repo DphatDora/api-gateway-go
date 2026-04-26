@@ -16,9 +16,12 @@ var (
 )
 
 type Config struct {
-	App      App             `mapstructure:"app"`
-	Log      Log             `mapstructure:"log"`
-	Services []ServiceTarget `mapstructure:"services"`
+	App       App             `mapstructure:"app"`
+	Log       Log             `mapstructure:"log"`
+	Services  []ServiceTarget `mapstructure:"services"`
+	Redis     Redis           `mapstructure:"redis"`
+	RateLimit RateLimit       `mapstructure:"rateLimit"`
+	Cache     Cache           `mapstructure:"cache"`
 }
 
 func LoadConfig() {
@@ -68,4 +71,12 @@ func bindEnvs() {
 	_ = viper.BindEnv("log.console", "LOG_CONSOLE")
 	_ = viper.BindEnv("log.dashboardToken", "LOG_DASHBOARD_TOKEN")
 	_ = viper.BindEnv("log.requestLogPath", "LOG_REQUEST_LOG_PATH")
+
+	// Redis
+	_ = viper.BindEnv("redis.host", "REDIS_HOST")
+	_ = viper.BindEnv("redis.port", "REDIS_PORT")
+	_ = viper.BindEnv("redis.password", "REDIS_PASSWORD")
+	_ = viper.BindEnv("redis.db", "REDIS_DB")
+	_ = viper.BindEnv("redis.poolSize", "REDIS_POOL_SIZE")
+	_ = viper.BindEnv("redis.required", "REDIS_REQUIRED")
 }

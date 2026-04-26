@@ -31,3 +31,44 @@ services:
     prefix: /social-media
     target: http://localhost:8044/api/v1
     healthPath: /health
+
+redis:
+  host:
+  port:
+  password:
+  db:
+  poolSize:
+  required:
+
+rateLimit:
+  enabled: true
+  global:
+    limit: 100
+    window: 60
+  routes:
+    - pattern: /social/auth/login
+      limit: 5
+      window: 60
+    - pattern: /social/auth/google-login
+      limit: 5
+      window: 60
+    - pattern: /social/chatbot
+      limit: 5
+      window: 60
+    - pattern: /academy/judge0
+      limit: 10
+      window: 60
+
+cache:
+  enabled: true
+  routes:
+    - pattern: /social/posts
+      ttl: 30
+    - pattern: /social/communities
+      ttl: 60
+    - pattern: /social/users
+      ttl: 120
+    - pattern: /academy/topics
+      ttl: 300
+    - pattern: /academy/lessons
+      ttl: 300

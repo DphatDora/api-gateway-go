@@ -10,6 +10,9 @@ import (
 	"api-gateway/internal/gateway"
 	"api-gateway/internal/interface/router"
 	"api-gateway/package/logger"
+	"api-gateway/package/redisconn"
+
+	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -52,8 +55,24 @@ func main() {
 	metricsCollector := gateway.NewMetricsCollector()
 	metricsCollector.LoadFromLog()
 
+	// Init Redis (optional — rate limiting and caching are disabled if Redis is unavailable)
+	var redisClient *redis.Client
+	rc, err := redisconn.NewClient(&conf.Redis)
+	if err != nil {
+		if conf.Redis.Required {
+			logger.Fatalf("[FATAL] Redis is required but unavailable: %v", err)
+		}
+		logger.Warnf("[Gateway] Redis unavailable: %v. Rate limiting and caching disabled.", err)
+	} else {
+		redisClient = rc
+		if redisClient != nil {
+			logger.Infof("[Gateway] Redis connected at %s:%s", conf.Redis.Host, conf.Redis.Port)
+			defer func() { _ = redisClient.Close() }()
+		}
+	}
+
 	// Setup routes
-	r := router.SetupRoutes(&conf, proxies, healthChecker, metricsCollector)
+	r := router.SetupRoutes(&conf, proxies, healthChecker, metricsCollector, redisClient)
 
 	port := conf.App.Port
 	if port == 0 {
