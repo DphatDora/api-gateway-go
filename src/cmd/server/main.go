@@ -50,6 +50,7 @@ func main() {
 
 	// Metrics collector
 	metricsCollector := gateway.NewMetricsCollector()
+	metricsCollector.LoadFromLog()
 
 	// Setup routes
 	r := router.SetupRoutes(&conf, proxies, healthChecker, metricsCollector)

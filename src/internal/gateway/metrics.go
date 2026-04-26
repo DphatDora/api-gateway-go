@@ -274,3 +274,28 @@ func (mc *MetricsCollector) Snapshot() MetricsSnapshot {
 		},
 	}
 }
+
+// LoadFromLog reads recent requests from the log file to populate the ring buffer.
+func (mc *MetricsCollector) LoadFromLog() {
+	path := logger.RequestLogFilePath()
+	if path == "" {
+		return
+	}
+	lines, err := logger.ReadTailLines(path, ringBufferSize, 5*1024*1024)
+	if err != nil || len(lines) == 0 {
+		return
+	}
+	
+	mc.ringMu.Lock()
+	defer mc.ringMu.Unlock()
+	for _, line := range lines {
+		var rec RequestRecord
+		if err := json.Unmarshal([]byte(line), &rec); err == nil {
+			mc.ring[mc.ringHead] = rec
+			mc.ringHead = (mc.ringHead + 1) % ringBufferSize
+			if mc.ringLen < ringBufferSize {
+				mc.ringLen++
+			}
+		}
+	}
+}

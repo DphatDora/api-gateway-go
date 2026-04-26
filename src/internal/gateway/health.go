@@ -7,18 +7,19 @@ import (
 	"time"
 
 	"api-gateway/config"
-	"api-gateway/package/logger"
 )
 
 // ServiceStatus represents the health state of a downstream service.
 type ServiceStatus struct {
-	Name         string `json:"name"`
-	Prefix       string `json:"prefix"`
-	Target       string `json:"target"`
-	Status       string `json:"status"` // "UP" or "DOWN"
-	ResponseTime int64  `json:"response_time_ms"`
-	LastCheck    string `json:"last_check"`
-	Error        string `json:"error,omitempty"`
+	Name         string    `json:"name"`
+	Prefix       string    `json:"prefix"`
+	Target       string    `json:"target"`
+	Status       string    `json:"status"` // "UP" or "DOWN"
+	ResponseTime int64     `json:"response_time_ms"`
+	LastCheck    string    `json:"last_check"`
+	Error        string    `json:"error,omitempty"`
+	UpSince      time.Time `json:"-"`
+	UptimeStr    string    `json:"uptime,omitempty"`
 }
 
 // HealthChecker periodically checks the health of downstream services.
@@ -105,19 +106,25 @@ func (hc *HealthChecker) checkService(svc config.ServiceTarget) {
 	if err != nil {
 		status.Status = "DOWN"
 		status.Error = err.Error()
-		logger.Warnf("[Health] %s is DOWN: %v", svc.Name, err)
+		status.UpSince = time.Time{}
+		status.UptimeStr = ""
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		if status.Status != "UP" {
+			status.UpSince = time.Now()
+		}
 		status.Status = "UP"
 		status.Error = ""
-		logger.Debugf("[Health] %s is UP (%dms)", svc.Name, elapsed)
+		uptimeDur := time.Since(status.UpSince).Round(time.Second)
+		status.UptimeStr = uptimeDur.String()
 	} else {
 		status.Status = "DOWN"
 		status.Error = fmt.Sprintf("HTTP %d", resp.StatusCode)
-		logger.Warnf("[Health] %s returned %d", svc.Name, resp.StatusCode)
+		status.UpSince = time.Time{}
+		status.UptimeStr = ""
 	}
 }
 
