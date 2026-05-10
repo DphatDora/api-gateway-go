@@ -72,3 +72,11 @@ cache:
       ttl: 300
     - pattern: /academy/lessons
       ttl: 300
+
+database:
+  postgres:
+    dsn:
+  mongo:
+    uri:
+  redis:
+    url:

@@ -22,6 +22,7 @@ type Config struct {
 	Redis     Redis           `mapstructure:"redis"`
 	RateLimit RateLimit       `mapstructure:"rateLimit"`
 	Cache     Cache           `mapstructure:"cache"`
+	Database  Database        `mapstructure:"database"`
 }
 
 func LoadConfig() {
@@ -79,4 +80,9 @@ func bindEnvs() {
 	_ = viper.BindEnv("redis.db", "REDIS_DB")
 	_ = viper.BindEnv("redis.poolSize", "REDIS_POOL_SIZE")
 	_ = viper.BindEnv("redis.required", "REDIS_REQUIRED")
+
+	// Database
+	_ = viper.BindEnv("database.postgres.dsn", "DB_POSTGRES_DSN")
+	_ = viper.BindEnv("database.mongo.uri", "DB_MONGO_URI")
+	_ = viper.BindEnv("database.redis.url", "DB_REDIS_URL")
 }

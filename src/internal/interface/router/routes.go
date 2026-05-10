@@ -50,6 +50,8 @@ func SetupRoutes(
 		dash.Use(handler.DashboardAuth(conf))
 		dash.GET("/gateway/dashboard", dashHandler.ServeDashboard)
 
+		ctrlHandler := handler.NewServiceControlHandler(conf)
+
 		dashAPI := router.Group("/gateway/api")
 		dashAPI.Use(handler.DashboardAuth(conf))
 		dashAPI.GET("/services", dashHandler.GetServices)
@@ -57,6 +59,8 @@ func SetupRoutes(
 		dashAPI.GET("/requests", dashHandler.GetRequests)
 		dashAPI.GET("/logs/files", dashHandler.GetLogFiles)
 		dashAPI.GET("/logs", dashHandler.GetLogs)
+		dashAPI.POST("/service/:name/control", ctrlHandler.ControlService)
+		dashAPI.GET("/db/status", ctrlHandler.GetDBStatus)
 	}
 
 	// ── Gateway health endpoint (public) ──

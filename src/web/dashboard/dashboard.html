@@ -310,135 +310,158 @@
         gap: 0.6rem;
       }
 
-      /* ── Service Map ── */
-      .service-map {
+      /* ── Service Map (SVG canvas) ── */
+      .map-wrap {
+        position: relative;
+        width: 100%;
+        min-height: 340px;
+        flex-shrink: 0;
+      }
+      .map-svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        overflow: visible;
+      }
+      .map-nodes {
+        position: relative;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 1.3rem;
-        padding: 1.5rem 1rem;
+        gap: 0;
+        padding: 1.2rem 1rem 1rem;
       }
       .gw-node {
         background: linear-gradient(135deg, var(--accent) 0%, #6c5ce7 100%);
         color: #fff;
-        padding: 0.8rem 1.8rem;
+        padding: 0.7rem 1.6rem;
         border-radius: 12px;
         font-weight: 700;
-        font-size: 0.9rem;
+        font-size: 0.88rem;
         text-align: center;
-        box-shadow: 0 4px 20px rgba(56, 139, 253, 0.3);
-        min-width: 180px;
-      }
-      .gw-node .gw-sub {
-        font-size: 0.68rem;
-        font-weight: 400;
-        opacity: 0.8;
-        margin-top: 0.2rem;
-      }
-      .conn-lines {
-        display: flex;
-        gap: 1.5rem;
-        justify-content: center;
-        align-items: flex-start;
-        flex-wrap: wrap;
-      }
-      .conn-line {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.4rem;
-      }
-      .conn-arrow {
-        width: 2px;
-        height: 36px;
-        background: var(--panel-border);
+        box-shadow: 0 4px 20px rgba(56,139,253,0.35);
+        min-width: 160px;
+        z-index: 2;
         position: relative;
-        transition: background 0.3s;
+        cursor: pointer;
+        user-select: none;
+        transition: box-shadow 0.2s;
       }
-      .conn-arrow::after {
-        content: "";
-        position: absolute;
-        bottom: -5px;
-        left: -4px;
-        border-left: 5px solid transparent;
-        border-right: 5px solid transparent;
-        border-top: 6px solid var(--panel-border);
-        transition: border-top-color 0.3s;
-      }
-      .conn-arrow.up {
-        background: var(--success);
-      }
-      .conn-arrow.up::after {
-        border-top-color: var(--success);
-      }
-      .conn-arrow.down {
-        background: var(--err);
-      }
-      .conn-arrow.down::after {
-        border-top-color: var(--err);
+      .gw-node:hover { box-shadow: 0 6px 28px rgba(56,139,253,0.55); }
+      .gw-node .gw-sub { font-size: 0.65rem; font-weight: 400; opacity: 0.8; margin-top: 0.15rem; }
+      .svc-row {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 90px;
+        z-index: 2;
+        position: relative;
       }
       .svc-node {
         background: var(--panel);
+        border: 1.5px solid var(--panel-border);
+        border-radius: 10px;
+        padding: 0.65rem 1rem 0.5rem;
+        text-align: center;
+        min-width: 150px;
+        max-width: 190px;
+        position: relative;
+        cursor: pointer;
+        transition: box-shadow 0.25s, border-color 0.25s, transform 0.15s;
+        z-index: 2;
+      }
+      .svc-node:hover { transform: translateY(-3px); }
+      .svc-node.up   { border-color: var(--success); box-shadow: var(--glow-up); }
+      .svc-node.down { border-color: var(--err);     box-shadow: var(--glow-down); }
+      .svc-node.unknown { border-color: var(--warn); }
+      .svc-name   { font-weight: 700; font-size: 0.8rem; margin-bottom: 0.2rem; }
+      .svc-prefix { font-size: 0.64rem; color: var(--muted); font-family: ui-monospace,monospace; margin-bottom: 0.18rem; }
+      .svc-badge  { display: inline-block; font-size: 0.58rem; font-weight: 700; padding: 0.08rem 0.35rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em; transition: background 0.3s, color 0.3s; }
+      .svc-badge.up      { background: rgba(63,185,80,0.15);  color: var(--success); }
+      .svc-badge.down    { background: rgba(248,81,73,0.15);  color: var(--err); }
+      .svc-badge.unknown { background: rgba(210,153,34,0.15); color: var(--warn); }
+      .svc-latency { font-size: 0.62rem; color: var(--muted); margin-top: 0.15rem; }
+      /* Service control buttons */
+      .svc-controls {
+        display: flex;
+        gap: 0.25rem;
+        justify-content: center;
+        margin-top: 0.35rem;
+        opacity: 0;
+        transition: opacity 0.18s;
+      }
+      .svc-node:hover .svc-controls { opacity: 1; }
+      .ctrl-btn {
+        font-size: 0.56rem;
+        font-weight: 700;
+        padding: 0.1rem 0.3rem;
+        border-radius: 3px;
+        border: 1px solid var(--panel-border);
+        background: var(--input-bg);
+        color: var(--muted);
+        cursor: pointer;
+        font-family: inherit;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
+      }
+      .ctrl-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+      .ctrl-btn.stop:hover  { background: var(--err);  border-color: var(--err); }
+      .ctrl-btn.start:hover { background: var(--success); border-color: var(--success); }
+      /* Metrics hover popup */
+      .metrics-popup {
+        display: none;
+        position: fixed;
+        z-index: 900;
+        background: var(--panel);
         border: 1px solid var(--panel-border);
         border-radius: 10px;
-        padding: 0.8rem 1.2rem;
-        text-align: center;
-        min-width: 160px;
-        transition:
-          box-shadow 0.3s,
-          border-color 0.3s;
+        padding: 0.75rem 1rem;
+        min-width: 230px;
+        box-shadow: var(--shadow);
+        pointer-events: none;
+        animation: popup-in 0.12s ease;
       }
-      .svc-node.up {
-        border-color: var(--success);
-        box-shadow: var(--glow-up);
+      @keyframes popup-in { from { opacity:0; transform:scale(0.96) translateY(4px); } to { opacity:1; transform:scale(1) translateY(0); } }
+      .popup-title { font-size: 0.68rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; border-bottom: 1px solid var(--panel-border); padding-bottom: 0.3rem; }
+      .popup-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem 0.6rem; }
+      .popup-item  .metric-label { color: var(--muted); font-size: 0.64rem; }
+      .popup-item  .metric-value { font-weight: 700; font-size: 0.86rem; color: var(--text); }
+      /* DB status bar */
+      .db-bar {
+        display: flex;
+        gap: 0.6rem;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 0.55rem 1rem;
+        border-top: 1px solid var(--panel-border);
+        flex-shrink: 0;
+        background: var(--panel);
       }
-      .svc-node.down {
-        border-color: var(--err);
-        box-shadow: var(--glow-down);
+      .db-bar-label { font-size: 0.64rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-right: 0.3rem; }
+      .db-chip {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.22rem 0.6rem;
+        border-radius: 20px;
+        border: 1px solid var(--panel-border);
+        background: var(--input-bg);
+        transition: border-color 0.3s;
+        cursor: default;
       }
-      .svc-node.unknown {
-        border-color: var(--warn);
-      }
-      .svc-name {
-        font-weight: 700;
-        font-size: 0.84rem;
-        margin-bottom: 0.25rem;
-      }
-      .svc-prefix {
-        font-size: 0.68rem;
-        color: var(--muted);
-        font-family: ui-monospace, monospace;
-        margin-bottom: 0.25rem;
-      }
-      .svc-badge {
-        display: inline-block;
-        font-size: 0.62rem;
-        font-weight: 700;
-        padding: 0.1rem 0.4rem;
-        border-radius: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        transition:
-          background 0.3s,
-          color 0.3s;
-      }
-      .svc-badge.up {
-        background: rgba(63, 185, 80, 0.15);
-        color: var(--success);
-      }
-      .svc-badge.down {
-        background: rgba(248, 81, 73, 0.15);
-        color: var(--err);
-      }
-      .svc-badge.unknown {
-        background: rgba(210, 153, 34, 0.15);
-        color: var(--warn);
-      }
-      .svc-latency {
-        font-size: 0.66rem;
-        color: var(--muted);
-        margin-top: 0.2rem;
-      }
+      .db-chip.up   { border-color: var(--success); color: var(--success); }
+      .db-chip.down { border-color: var(--err);     color: var(--err); }
+      .db-chip.unconfigured { border-color: var(--panel-border); color: var(--muted); }
+      .db-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+      .db-chip.up   .db-dot { background: var(--success); box-shadow: 0 0 6px rgba(63,185,80,0.6); }
+      .db-chip.down .db-dot { background: var(--err); }
+      .db-chip.unconfigured .db-dot { background: var(--muted); }
 
       /* ── Metrics cards ── */
       .metrics-grid {
@@ -842,7 +865,7 @@
     <div class="layout">
       <aside class="sidebar">
         <div class="sidebar-header">
-          <h1><span class="logo-icon">⚡</span> API Gateway</h1>
+          <h1>API Gateway</h1>
           <div class="theme-toggle-wrap">
             <span class="theme-icon">🌙</span>
             <label class="toggle" title="Toggle theme"
@@ -961,14 +984,22 @@
 
         <!-- Tab: Service Map -->
         <div class="tab-panel active" id="tab-map">
-          <div class="service-map">
-            <div class="gw-node">
-              <div>⚡ API Gateway</div>
-              <div class="gw-sub" id="gwPort">:8080</div>
+          <div class="map-wrap" id="mapWrap">
+            <svg class="map-svg" id="mapSvg"></svg>
+            <div class="map-nodes">
+              <div class="gw-node" id="gwNode" data-svc="gateway">
+                <div>API Gateway</div>
+                <div class="gw-sub" id="gwPort">:8080</div>
+              </div>
+              <div class="svc-row" id="svcRow"></div>
             </div>
-            <div class="conn-lines" id="connLines"></div>
           </div>
-          <div class="metrics-grid" id="metricsGrid"></div>
+          <div class="db-bar" id="dbBar">
+            <span class="db-bar-label">Databases</span>
+            <span class="db-chip unconfigured" id="db-postgres"><span class="db-dot"></span>PostgreSQL</span>
+            <span class="db-chip unconfigured" id="db-mongo"><span class="db-dot"></span>MongoDB</span>
+            <span class="db-chip unconfigured" id="db-redis"><span class="db-dot"></span>Redis</span>
+          </div>
         </div>
 
         <!-- Tab: Request Monitor -->
@@ -997,6 +1028,15 @@
         </div>
       </div>
     </div>
+
+    <!-- Metrics hover popup -->
+    <div class="metrics-popup" id="metricsPopup">
+      <div class="popup-title" id="popupTitle">Service Metrics</div>
+      <div class="popup-grid" id="popupGrid"></div>
+    </div>
+
+    <!-- Control toast -->
+    <div id="ctrlToast" style="display:none;position:fixed;bottom:1.2rem;right:1.2rem;z-index:1100;background:var(--panel);border:1px solid var(--panel-border);border-radius:8px;padding:0.6rem 1rem;font-size:0.76rem;box-shadow:var(--shadow);max-width:340px;word-break:break-all;"></div>
 
     <!-- Modal -->
     <div class="modal-overlay" id="modalOverlay">
@@ -1041,8 +1081,13 @@
           filterStatus = document.getElementById("filterStatus");
         var refreshBtn = document.getElementById("refreshBtn"),
           autoRefreshInput = document.getElementById("autoRefresh");
-        var connLines = document.getElementById("connLines"),
-          metricsGrid = document.getElementById("metricsGrid"),
+        var svcRow = document.getElementById("svcRow"),
+          mapSvg = document.getElementById("mapSvg"),
+          mapWrap = document.getElementById("mapWrap"),
+          metricsPopup = document.getElementById("metricsPopup"),
+          popupTitle = document.getElementById("popupTitle"),
+          popupGrid = document.getElementById("popupGrid"),
+          ctrlToast = document.getElementById("ctrlToast"),
           reqTableBody = document.getElementById("reqTableBody");
         var logContainer = document.getElementById("logContainer");
         var logFileSel = document.getElementById("logFileSel"),
@@ -1148,6 +1193,49 @@
           );
         }
 
+        /* ── Service map data ── */
+        var cachedSvcMetrics = {};   // name -> metrics snapshot
+        var cachedSysMeta   = {};    // system metrics
+
+        /* ── Draw SVG connector lines from gateway node to each service node ── */
+        function drawLines() {
+          mapSvg.innerHTML = "";
+          var gwEl = document.getElementById("gwNode");
+          if (!gwEl) return;
+          var wrapRect = mapWrap.getBoundingClientRect();
+          var gwRect   = gwEl.getBoundingClientRect();
+          var gwCX = gwRect.left - wrapRect.left + gwRect.width / 2;
+          var gwCY = gwRect.top  - wrapRect.top  + gwRect.height;
+          document.querySelectorAll(".svc-node").forEach(function(nd) {
+            var nr = nd.getBoundingClientRect();
+            var nx = nr.left - wrapRect.left + nr.width / 2;
+            var ny = nr.top  - wrapRect.top;
+            var status = nd.dataset.status || "unknown";
+            var color = status === "up" ? "var(--success)" : status === "down" ? "var(--err)" : "var(--warn)";
+            // Bezier curve
+            var cy1 = gwCY + (ny - gwCY) * 0.45;
+            var cy2 = ny   - (ny - gwCY) * 0.45;
+            var path = document.createElementNS("http://www.w3.org/2000/svg","path");
+            path.setAttribute("d","M "+gwCX+" "+gwCY+" C "+gwCX+" "+cy1+", "+nx+" "+cy2+", "+nx+" "+ny);
+            path.setAttribute("stroke", color);
+            path.setAttribute("stroke-width","1.5");
+            path.setAttribute("fill","none");
+            path.setAttribute("opacity","0.55");
+            // animated dash flow
+            path.setAttribute("stroke-dasharray","6 4");
+            var anim = document.createElementNS("http://www.w3.org/2000/svg","animateTransform");
+            anim.setAttribute("attributeName","stroke-dashoffset"); anim.setAttribute("from","10"); anim.setAttribute("to","0");
+            anim.setAttribute("dur","1.2s"); anim.setAttribute("repeatCount","indefinite");
+            path.appendChild(anim);
+            mapSvg.appendChild(path);
+            // arrowhead circle at service end
+            var circ = document.createElementNS("http://www.w3.org/2000/svg","circle");
+            circ.setAttribute("cx", nx); circ.setAttribute("cy", ny);
+            circ.setAttribute("r","3"); circ.setAttribute("fill", color); circ.setAttribute("opacity","0.8");
+            mapSvg.appendChild(circ);
+          });
+        }
+
         /* ── Load services + service map ── */
         async function loadServices() {
           try {
@@ -1156,226 +1244,164 @@
             var data = await res.json();
             var services = data.services || [];
 
-            // Track known service names for metrics
-            knownServiceNames = services.map(function (s) {
-              return s.name;
-            });
+            knownServiceNames = services.map(function(s){ return s.name; });
 
             // Update filter dropdown
             var prevFilter = filterService.value;
             var existing = new Set();
-            for (var i = 0; i < filterService.options.length; i++)
-              existing.add(filterService.options[i].value);
-            services.forEach(function (svc) {
-              if (!existing.has(svc.name)) {
-                var o = document.createElement("option");
-                o.value = svc.name;
-                o.textContent = svc.name;
-                filterService.appendChild(o);
+            for (var i=0;i<filterService.options.length;i++) existing.add(filterService.options[i].value);
+            services.forEach(function(svc){
+              if (!existing.has(svc.name)){
+                var o=document.createElement("option"); o.value=svc.name; o.textContent=svc.name; filterService.appendChild(o);
               }
             });
             if (prevFilter) filterService.value = prevFilter;
 
-            // In-place update service map
-            services.forEach(function (svc) {
-              var s = (svc.status || "unknown").toLowerCase();
-              var conn = document.getElementById("svc-conn-" + svc.name);
-              if (conn) {
-                var ar = conn.querySelector(".conn-arrow");
-                if (ar) ar.className = "conn-arrow " + s;
-                var nd = conn.querySelector(".svc-node");
-                if (nd) nd.className = "svc-node " + s;
-                var bg = conn.querySelector(".svc-badge");
-                if (bg) {
-                  bg.className = "svc-badge " + s;
-                  bg.textContent = svc.status || "UNKNOWN";
-                }
-                var lt = conn.querySelector(".svc-latency");
-                if (lt) {
-                  lt.textContent =
-                    svc.uptime ? svc.uptime : svc.error || "";
-                  lt.style.color = svc.error ? "var(--err)" : "";
-                }
+            // Build/update service node cards
+            services.forEach(function(svc){
+              var s = (svc.status||"unknown").toLowerCase();
+              var nd = document.getElementById("svcnd-"+svc.name);
+              if (nd) {
+                nd.className = "svc-node " + s;
+                nd.dataset.status = s;
+                var bg = nd.querySelector(".svc-badge"); if(bg){ bg.className="svc-badge "+s; bg.textContent=svc.status||"UNKNOWN"; }
+                var lt = nd.querySelector(".svc-latency"); if(lt){ lt.textContent=svc.uptime?svc.uptime:(svc.error||""); lt.style.color=svc.error?"var(--err)":""; }
               } else {
-                var d = document.createElement("div");
-                d.className = "conn-line";
-                d.id = "svc-conn-" + svc.name;
-                d.innerHTML =
-                  '<div class="conn-arrow ' +
-                  s +
-                  '"></div><div class="svc-node ' +
-                  s +
-                  '"><div class="svc-name">' +
-                  esc(svc.name) +
-                  '</div><div class="svc-prefix">' +
-                  esc(svc.prefix) +
-                  " → " +
-                  esc(svc.target) +
-                  '</div><span class="svc-badge ' +
-                  s +
-                  '">' +
-                  esc(svc.status || "UNKNOWN") +
-                  '</span><div class="svc-latency">' +
-                  (svc.uptime ? svc.uptime : svc.error ? esc(svc.error) : "") +
-                  "</div></div>";
-                connLines.appendChild(d);
+                var el = document.createElement("div");
+                el.className = "svc-node "+s;
+                el.id = "svcnd-"+svc.name;
+                el.dataset.status = s;
+                el.dataset.svcName = svc.name;
+                el.innerHTML =
+                  '<div class="svc-name">'+esc(svc.name)+'</div>'+
+                  '<div class="svc-prefix">'+esc(svc.prefix)+' → '+esc(svc.target)+'</div>'+
+                  '<span class="svc-badge '+s+'">'+esc(svc.status||"UNKNOWN")+'</span>'+
+                  '<div class="svc-latency">'+(svc.uptime?svc.uptime:(svc.error?esc(svc.error):""))+'</div>'+
+                  '<div class="svc-controls">'+
+                    '<button class="ctrl-btn start" data-action="start" data-svc="'+esc(svc.name)+'">▶ Start</button>'+
+                    '<button class="ctrl-btn stop"  data-action="stop"  data-svc="'+esc(svc.name)+'">■ Stop</button>'+
+                    '<button class="ctrl-btn"       data-action="restart" data-svc="'+esc(svc.name)+'">↺ Restart</button>'+
+                  '</div>';
+                // Hover: show metrics popup
+                el.addEventListener("mouseenter", function(e){ showPopup(e, this.dataset.svcName); });
+                el.addEventListener("mousemove",  function(e){ positionPopup(e); });
+                el.addEventListener("mouseleave", function(){ hidePopup(); });
+                svcRow.appendChild(el);
               }
             });
-          } catch (e) {
-            /* ignore */
-          }
+
+            // Also show gateway node hover popup (system metrics)
+            var gwEl = document.getElementById("gwNode");
+            if (gwEl && !gwEl._hasPopup) {
+              gwEl._hasPopup = true;
+              gwEl.addEventListener("mouseenter", function(e){ showPopup(e, "gateway"); });
+              gwEl.addEventListener("mousemove",  function(e){ positionPopup(e); });
+              gwEl.addEventListener("mouseleave", function(){ hidePopup(); });
+            }
+
+            // Redraw SVG lines after DOM settles
+            setTimeout(drawLines, 60);
+          } catch(e){ /* ignore */ }
         }
 
-        /* ── Load metrics ── */
-        var metricsInitialized = false;
+        /* ── Metrics popup helpers ── */
+        function popupItem(label, value) {
+          return '<div class="popup-item"><div class="metric-label">'+label+'</div><div class="metric-value">'+value+'</div></div>';
+        }
+        function showPopup(e, name) {
+          if (name === "gateway") {
+            var s = cachedSysMeta;
+            var m = (s.memory || {});
+            popupTitle.textContent = "API Gateway — System";
+            popupGrid.innerHTML =
+              popupItem("Goroutines", s.num_goroutine||0)+
+              popupItem("Uptime", s.uptime||"-")+
+              popupItem("Alloc", formatBytes(m.alloc_bytes))+
+              popupItem("Heap InUse", formatBytes(m.heap_inuse_bytes))+
+              popupItem("GC Count", m.num_gc||0)+
+              popupItem("Stack InUse", formatBytes(m.stack_inuse_bytes));
+          } else {
+            var svc = cachedSvcMetrics[name] || {};
+            popupTitle.textContent = name;
+            popupGrid.innerHTML =
+              popupItem("Requests", svc.request_count||0)+
+              popupItem("Req/Min", svc.requests_per_min||0)+
+              popupItem("Avg Latency", (svc.avg_latency_ms||0).toFixed(2)+" ms")+
+              popupItem("Min/Max", (svc.min_latency_ms||0).toFixed(2)+"/"+(svc.max_latency_ms||0).toFixed(2)+" ms")+
+              popupItem("2xx/3xx", (svc.status_2xx||0)+"/"+(svc.status_3xx||0))+
+              popupItem("4xx/5xx", (svc.status_4xx||0)+"/"+(svc.status_5xx||0));
+          }
+          metricsPopup.style.display = "block";
+          positionPopup(e);
+        }
+        function positionPopup(e) {
+          var pw=metricsPopup.offsetWidth, ph=metricsPopup.offsetHeight;
+          var x=e.clientX+14, y=e.clientY-12;
+          if(x+pw>window.innerWidth-10) x=e.clientX-pw-14;
+          if(y+ph>window.innerHeight-10) y=e.clientY-ph+12;
+          metricsPopup.style.left=x+"px"; metricsPopup.style.top=y+"px";
+        }
+        function hidePopup() { metricsPopup.style.display="none"; }
+
+        /* ── Load metrics (stores in cachedSvcMetrics for popup) ── */
         async function loadMetrics() {
           try {
             var res = await fetch(apiUrl("/gateway/api/metrics"));
             if (!res.ok) return;
             var data = await res.json();
-            var sys = data.system || {},
-              mem = sys.memory || {};
-            var services = (data.services || []).filter(function (s) {
-              return s.name !== "gateway";
-            });
-            var total = data.total || {};
-
-            // Build a lookup map
-            var svcMap = {};
-            services.forEach(function (s) {
-              svcMap[s.name] = s;
-            });
-
-            if (!metricsInitialized) {
-              metricsGrid.innerHTML = "";
-              // System card
-              metricsGrid.innerHTML +=
-                '<section class="metrics-card"><div class="metrics-title">System</div><div class="metrics-items">' +
-                mi("mc-sys-goroutine", "Goroutines", sys.num_goroutine || 0) +
-                mi("mc-sys-uptime", "Uptime", esc(sys.uptime || "-")) +
-                mi("mc-sys-alloc", "Alloc", formatBytes(mem.alloc_bytes)) +
-                mi(
-                  "mc-sys-heap",
-                  "Heap InUse",
-                  formatBytes(mem.heap_inuse_bytes),
-                ) +
-                mi("mc-sys-gc", "GC Count", mem.num_gc || 0) +
-                mi(
-                  "mc-sys-stack",
-                  "Stack InUse",
-                  formatBytes(mem.stack_inuse_bytes),
-                ) +
-                "</div></section>";
-              // Total card
-              metricsGrid.innerHTML +=
-                '<section class="metrics-card"><div class="metrics-title">Total (last 60s)</div><div class="metrics-items">' +
-                mi("mc-tot-rpm", "Req/Min", total.requests_per_min || 0) +
-                mi("mc-tot-count", "Total Requests", total.request_count || 0) +
-                mi(
-                  "mc-tot-avg",
-                  "Avg Latency",
-                  (total.avg_latency_ms || 0).toFixed(2) + " ms",
-                ) +
-                "</div></section>";
-              // Per-service cards — use knownServiceNames so cards always show
-              knownServiceNames.forEach(function (name) {
-                var svc = svcMap[name] || {
-                  name: name,
-                  request_count: 0,
-                  requests_per_min: 0,
-                  avg_latency_ms: 0,
-                  min_latency_ms: 0,
-                  max_latency_ms: 0,
-                  status_2xx: 0,
-                  status_3xx: 0,
-                  status_4xx: 0,
-                  status_5xx: 0,
-                };
-                metricsGrid.innerHTML +=
-                  '<section class="metrics-card"><div class="metrics-title">' +
-                  esc(svc.name) +
-                  '</div><div class="metrics-items">' +
-                  mi(
-                    "mc-" + svc.name + "-count",
-                    "Requests",
-                    svc.request_count || 0,
-                  ) +
-                  mi(
-                    "mc-" + svc.name + "-rpm",
-                    "Req/Min",
-                    svc.requests_per_min || 0,
-                  ) +
-                  mi(
-                    "mc-" + svc.name + "-avg",
-                    "Avg Latency",
-                    (svc.avg_latency_ms || 0).toFixed(2) + " ms",
-                  ) +
-                  mi(
-                    "mc-" + svc.name + "-minmax",
-                    "Min/Max",
-                    (svc.min_latency_ms || 0).toFixed(2) +
-                      "/" +
-                      (svc.max_latency_ms || 0).toFixed(2) +
-                      " ms",
-                  ) +
-                  mi(
-                    "mc-" + svc.name + "-2xx3xx",
-                    "2xx / 3xx",
-                    (svc.status_2xx || 0) + " / " + (svc.status_3xx || 0),
-                  ) +
-                  mi(
-                    "mc-" + svc.name + "-4xx5xx",
-                    "4xx / 5xx",
-                    (svc.status_4xx || 0) + " / " + (svc.status_5xx || 0),
-                  ) +
-                  "</div></section>";
-              });
-              metricsInitialized = true;
-            } else {
-              // In-place value updates
-              updateVal("mc-sys-goroutine", sys.num_goroutine || 0);
-              updateVal("mc-sys-uptime", sys.uptime || "-");
-              updateVal("mc-sys-alloc", formatBytes(mem.alloc_bytes));
-              updateVal("mc-sys-heap", formatBytes(mem.heap_inuse_bytes));
-              updateVal("mc-sys-gc", mem.num_gc || 0);
-              updateVal("mc-sys-stack", formatBytes(mem.stack_inuse_bytes));
-              updateVal("mc-tot-rpm", total.requests_per_min || 0);
-              updateVal("mc-tot-count", total.request_count || 0);
-              updateVal(
-                "mc-tot-avg",
-                (total.avg_latency_ms || 0).toFixed(2) + " ms",
-              );
-              knownServiceNames.forEach(function (name) {
-                var svc = svcMap[name] || {};
-                updateVal("mc-" + name + "-count", svc.request_count || 0);
-                updateVal("mc-" + name + "-rpm", svc.requests_per_min || 0);
-                updateVal(
-                  "mc-" + name + "-avg",
-                  (svc.avg_latency_ms || 0).toFixed(2) + " ms",
-                );
-                updateVal(
-                  "mc-" + name + "-minmax",
-                  (svc.min_latency_ms || 0).toFixed(2) +
-                    "/" +
-                    (svc.max_latency_ms || 0).toFixed(2) +
-                    " ms",
-                );
-                updateVal(
-                  "mc-" + name + "-2xx3xx",
-                  (svc.status_2xx || 0) + " / " + (svc.status_3xx || 0),
-                );
-                updateVal(
-                  "mc-" + name + "-4xx5xx",
-                  (svc.status_4xx || 0) + " / " + (svc.status_5xx || 0),
-                );
-              });
-            }
-          } catch (e) {
-            /* ignore */
-          }
+            cachedSysMeta = data.system || {};
+            (data.services||[]).forEach(function(s){ cachedSvcMetrics[s.name]=s; });
+          } catch(e){ /* ignore */ }
         }
 
-        /* ── Load requests ── */
+        /* ── Service control ── */
+        document.addEventListener("click", function(e){
+          var btn = e.target.closest(".ctrl-btn");
+          if (!btn) return;
+          e.stopPropagation();
+          var svc=btn.dataset.svc, action=btn.dataset.action;
+          if (!svc||!action) return;
+          btn.disabled=true;
+          fetch(apiUrl("/gateway/api/service/"+encodeURIComponent(svc)+"/control"),{
+            method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({action:action})
+          }).then(function(r){ return r.json(); }).then(function(d){
+            showToast((d.error?"❌ ":"✅ ")+svc+" "+action+(d.output?"\n"+d.output.substring(0,200):""), d.error?4000:2500);
+            setTimeout(function(){ loadServices(); loadMetrics(); }, 800);
+          }).catch(function(err){ showToast("❌ "+err,3000); }).finally(function(){ btn.disabled=false; });
+        });
+
+        function showToast(msg, ms) {
+          ctrlToast.textContent=msg; ctrlToast.style.display="block";
+          clearTimeout(ctrlToast._t);
+          ctrlToast._t=setTimeout(function(){ ctrlToast.style.display="none"; }, ms||2500);
+        }
+
+        /* ── Load DB status ── */
+        async function loadDBStatus() {
+          try {
+            var res = await fetch(apiUrl("/gateway/api/db/status"));
+            if (!res.ok) return;
+            var data = await res.json();
+            (data.databases||[]).forEach(function(db){
+              var id = "db-"+db.type;
+              var chip = document.getElementById(id);
+              if (!chip) return;
+              var cls = db.status==="UP"?"up":db.status==="DOWN"?"down":"unconfigured";
+              chip.className = "db-chip "+cls;
+              var label = db.name+(db.status==="UP"?" ("+db.latency_ms+"ms)":db.status==="DOWN"?" ✕":"");
+              chip.querySelector(".db-dot").outerHTML = '<span class="db-dot"></span>';
+              chip.textContent = label;
+              var dot=document.createElement("span"); dot.className="db-dot";
+              chip.insertBefore(dot, chip.firstChild);
+              chip.title = db.error||db.status;
+            });
+          } catch(e){ /* ignore */ }
+        }
+
+        // Redraw lines on window resize
+        window.addEventListener("resize", function(){ drawLines(); });
+
         async function loadRequests() {
           try {
             var res = await fetch(
@@ -1649,7 +1675,7 @@
           if (activeTab === "logs") {
             await loadLogs();
           } else {
-            await Promise.all([loadMetrics(), loadRequests()]);
+            await Promise.all([loadMetrics(), loadRequests(), loadDBStatus()]);
           }
           statusEl.textContent = "Updated — " + new Date().toLocaleTimeString();
         }

@@ -3,3 +3,5 @@ logs/
 *.exe
 *.log
 /docs
+deploy.sh
+api-gateway-go
