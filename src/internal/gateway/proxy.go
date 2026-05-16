@@ -47,6 +47,16 @@ func NewServiceProxy(svc config.ServiceTarget) (*ServiceProxy, error) {
 		ModifyResponse: func(resp *http.Response) error {
 			// Remove hop-by-hop headers from response
 			removeHopHeaders(resp.Header)
+			// Remove CORS headers from backend response — gateway owns CORS.
+			// httputil.ReverseProxy uses Header.Add() when copying headers, so
+			// any CORS headers from the backend would create duplicates alongside
+			// the gateway's headers, causing browsers to reject the response.
+			resp.Header.Del("Access-Control-Allow-Origin")
+			resp.Header.Del("Access-Control-Allow-Methods")
+			resp.Header.Del("Access-Control-Allow-Headers")
+			resp.Header.Del("Access-Control-Allow-Credentials")
+			resp.Header.Del("Access-Control-Max-Age")
+			resp.Header.Del("Access-Control-Expose-Headers")
 			return nil
 		},
 		ErrorHandler: func(w http.ResponseWriter, req *http.Request, err error) {
