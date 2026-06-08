@@ -160,6 +160,12 @@ func log() *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 }
 
+// IsDebugEnabled reports whether the debug level is currently active.
+// Use this to guard expensive body reads before calling Debugf.
+func IsDebugEnabled() bool {
+	return levelVar.Level() <= slog.LevelDebug
+}
+
 // Debugf logs at debug level after formatting the message.
 func Debugf(format string, args ...any) {
 	log().Debug(fmt.Sprintf(format, args...))

@@ -860,7 +860,6 @@
         word-break: break-all;
       }
 
-      /* ── Log detail modal ── */
       .log-json {
         background: var(--input-bg);
         border: 1px solid var(--panel-border);
@@ -872,6 +871,80 @@
         white-space: pre-wrap;
         word-break: break-all;
         overflow-x: auto;
+        color: var(--text);
+      }
+      /* Log entry structured view */
+      .log-body-block {
+        background: var(--input-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        overflow: hidden;
+        margin-top: 0.2rem;
+      }
+      .log-body-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.3rem 0.7rem;
+        border-bottom: 1px solid var(--panel-border);
+        background: rgba(56,139,253,0.05);
+        font-size: 0.64rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+      }
+      .log-body-toolbar .body-type-badge {
+        margin-left: auto;
+        font-size: 0.58rem;
+        padding: 0.05rem 0.3rem;
+        border-radius: 3px;
+        background: var(--tag-bg);
+        color: var(--tag-text);
+      }
+      .log-body-content {
+        padding: 0.65rem 0.8rem;
+        font-family: ui-monospace, monospace;
+        font-size: 0.72rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-all;
+        overflow-x: auto;
+        max-height: 320px;
+        overflow-y: auto;
+        color: var(--text);
+      }
+      /* JSON syntax highlight */
+      .jk { color: var(--accent); }       /* key */
+      .js { color: var(--success); }      /* string value */
+      .jn { color: #e3c27a; }             /* number */
+      .jb { color: #d2a0ff; }             /* bool/null */
+      .log-direction-req { color: var(--info); }
+      .log-direction-res { color: var(--success); }
+      .log-meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--panel-border);
+        margin-bottom: 0.6rem;
+        font-size: 0.72rem;
+        font-family: ui-monospace, monospace;
+      }
+      .log-meta-chip {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+      .log-meta-chip .chip-label {
+        font-size: 0.62rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+      }
+      .log-meta-chip .chip-val {
+        font-weight: 600;
         color: var(--text);
       }
 
@@ -1782,24 +1855,146 @@
           }
         }
 
-        // Click log line → modal with raw JSON
+        // Click log line → modal with structured view
         logContainer.addEventListener("click", function (e) {
           var line = e.target.closest(".log-line");
           if (!line) return;
           var raw = line.dataset.raw || "";
           modalTitle.textContent = "Log Entry";
-          var parsed = tryParseJSON(raw);
-          if (parsed) {
-            modalBody.innerHTML =
-              '<pre class="log-json">' +
-              esc(JSON.stringify(parsed, null, 2)) +
-              "</pre>";
-          } else {
-            modalBody.innerHTML =
-              '<pre class="log-json">' + esc(raw) + "</pre>";
-          }
+          modalBody.innerHTML = renderLogEntry(raw);
           modalOverlay.classList.add("open");
         });
+
+        /* ── Log entry renderer ── */
+        function renderLogEntry(raw) {
+          var parsed = tryParseJSON(raw);
+          if (!parsed) return '<pre class="log-json">' + esc(raw) + "</pre>";
+
+          var msg   = parsed.msg || "";
+          var level = (parsed.level || "").toUpperCase();
+          var time  = parsed.time || "";
+
+          // Detect [Request] / [Response] body log from proxy
+          // Format: "[Request] [METHOD] [PATH] | REQ BODY: {...}"
+          //         "[Response] [METHOD] [PATH] | RES [STATUS] BODY: {...}"
+          var reqMatch = msg.match(/^\[Request\]\s+\[([A-Z]+)\]\s+\[(.+?)\]\s+\|\s+REQ BODY:\s+([\s\S]*)$/);
+          var resMatch = msg.match(/^\[Response\]\s+\[([A-Z]+)\]\s+\[(.+?)\]\s+\|\s+RES\s+\[(\d+)\]\s+BODY:\s+([\s\S]*)$/);
+
+          if (reqMatch || resMatch) {
+            var isReq   = !!reqMatch;
+            var method  = isReq ? reqMatch[1] : resMatch[1];
+            var path    = isReq ? reqMatch[2] : resMatch[2];
+            var status  = isReq ? null        : parseInt(resMatch[3], 10);
+            var bodyRaw = isReq ? reqMatch[3] : resMatch[4];
+
+            var h = "";
+
+            // Header
+            h += '<div class="detail-section' + (isReq ? ' log-direction-req' : ' log-direction-res') + '">';
+            h +=   (isReq ? '↑ Request Body' : '↓ Response Body');
+            h += "</div>";
+
+            // Meta chips
+            h += '<div class="log-meta-row">';
+            h +=   chip("Time",   formatVietnamTime(time));
+            h +=   chip("Level",  '<span class="log-level log-level-' + level + '">' + level + "</span>");
+            h +=   chip("Method", '<span class="method-badge method-' + esc(method) + '">' + esc(method) + "</span>");
+            h +=   chip("Path",   esc(path));
+            if (status !== null) {
+              h += chip("Status", '<span class="status-code ' + statusClass(status) + '">' + status + "</span>");
+            }
+            h += "</div>";
+
+            // Body block
+            var bodyParsed = tryParseJSON(bodyRaw);
+            var isJSON = bodyParsed !== null;
+            h += '<div class="log-body-block">';
+            h +=   '<div class="log-body-toolbar">';
+            h +=     (isReq ? "Request Body" : "Response Body");
+            h +=     '<span class="body-type-badge">' + (isJSON ? "JSON" : "TEXT") + "</span>";
+            h +=   "</div>";
+            h +=   '<div class="log-body-content">';
+            if (isJSON) {
+              h +=   syntaxHighlightJSON(JSON.stringify(bodyParsed, null, 2));
+            } else {
+              h +=   esc(bodyRaw);
+            }
+            h +=   "</div>";
+            h += "</div>";
+
+            return h;
+          }
+
+          // ── Generic log entry (structured field view) ── //
+          var h = '<div class="detail-section">Log Entry</div>';
+          h += '<div class="detail-grid">';
+          h += dr("Time",  formatVietnamTime(time));
+          h += dr("Level", '<span class="log-level log-level-' + level + '">' + level + "</span>");
+          h += dr("Message", '<span style="word-break:break-word;white-space:pre-wrap">' + esc(msg) + "</span>");
+          // source
+          if (parsed.source) {
+            var src = parsed.source;
+            if (src.function) h += dr("Function", esc(src.function));
+            if (src.file)     h += dr("File", esc(src.file) + (src.line ? ":" + src.line : ""));
+          }
+          // any extra fields
+          Object.keys(parsed).forEach(function(k) {
+            if (["time","level","msg","source"].indexOf(k) >= 0) return;
+            var v = parsed[k];
+            var display = (typeof v === "object" && v !== null)
+              ? '<pre style="margin:0;white-space:pre-wrap;word-break:break-all">' + esc(JSON.stringify(v, null, 2)) + "</pre>"
+              : esc(String(v));
+            h += dr(k, display);
+          });
+          h += "</div>";
+          return h;
+        }
+
+        function chip(label, valHtml) {
+          return '<div class="log-meta-chip"><span class="chip-label">' + esc(label) + '</span><span class="chip-val">' + valHtml + "</span></div>";
+        }
+
+        /* Simple JSON syntax highlighter (no external deps) */
+        function syntaxHighlightJSON(str) {
+          var out = "";
+          var i = 0, len = str.length;
+          while (i < len) {
+            var c = str[i];
+            // String
+            if (c === '"') {
+              var j = i + 1;
+              while (j < len) {
+                if (str[j] === '\\') { j += 2; continue; }
+                if (str[j] === '"') { j++; break; }
+                j++;
+              }
+              var token = str.slice(i, j);
+              // peek forward (skip whitespace) to see if followed by :
+              var k = j;
+              while (k < len && (str[k] === ' ' || str[k] === '\n' || str[k] === '\r' || str[k] === '\t')) k++;
+              var isKey = str[k] === ':';
+              out += '<span class="' + (isKey ? 'jk' : 'js') + '">' + esc(token) + "</span>";
+              i = j;
+              continue;
+            }
+            // Number
+            if ((c >= '0' && c <= '9') || c === '-') {
+              var j = i;
+              while (j < len && ((str[j] >= '0' && str[j] <= '9') || str[j] === '.' || str[j] === 'e' || str[j] === 'E' || str[j] === '+' || str[j] === '-')) j++;
+              out += '<span class="jn">' + esc(str.slice(i, j)) + "</span>";
+              i = j;
+              continue;
+            }
+            // Bool / null keywords
+            if (str.startsWith("true", i))  { out += '<span class="jb">true</span>';  i += 4; continue; }
+            if (str.startsWith("false", i)) { out += '<span class="jb">false</span>'; i += 5; continue; }
+            if (str.startsWith("null", i))  { out += '<span class="jb">null</span>';  i += 4; continue; }
+            // Structural chars and whitespace — pass through as-is (HTML-escaped)
+            out += esc(c);
+            i++;
+          }
+          return out;
+        }
 
         function tryParseJSON(s) {
           try {
