@@ -389,12 +389,11 @@
         display: flex;
         gap: 0.25rem;
         justify-content: center;
+        flex-wrap: wrap;
         margin-top: 0.35rem;
-        opacity: 0;
-        transition: opacity 0.18s;
       }
-      .svc-node:hover .svc-controls { opacity: 1; }
-      .ctrl-btn {
+      .ctrl-btn,
+      .monitor-btn {
         font-size: 0.56rem;
         font-weight: 700;
         padding: 0.1rem 0.3rem;
@@ -408,7 +407,8 @@
         letter-spacing: 0.03em;
         transition: background 0.15s, color 0.15s, border-color 0.15s;
       }
-      .ctrl-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+      .ctrl-btn:hover,
+      .monitor-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
       .ctrl-btn.stop:hover  { background: var(--err);  border-color: var(--err); }
       .ctrl-btn.start:hover { background: var(--success); border-color: var(--success); }
       /* Metrics hover popup */
@@ -462,6 +462,53 @@
       .db-chip.up   .db-dot { background: var(--success); box-shadow: 0 0 6px rgba(63,185,80,0.6); }
       .db-chip.down .db-dot { background: var(--err); }
       .db-chip.unconfigured .db-dot { background: var(--muted); }
+
+      /* Service action console */
+      .action-console {
+        flex: 1;
+        min-height: 120px;
+        margin-top: 0.6rem;
+        background: #05080d;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      :root[data-theme="light"] .action-console {
+        background: #0d1117;
+      }
+      .console-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+        padding: 0.45rem 0.7rem;
+        border-bottom: 1px solid var(--panel-border);
+        color: var(--muted);
+        font-size: 0.66rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        flex-shrink: 0;
+      }
+      .console-body {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 0.55rem 0.7rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.72rem;
+        line-height: 1.45;
+        color: #c9d1d9;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .console-line { color: #c9d1d9; }
+      .console-line.cmd { color: #58a6ff; }
+      .console-line.ok { color: #3fb950; }
+      .console-line.err { color: #f85149; }
+      .console-line.muted { color: #7d8590; }
 
       /* ── Metrics cards ── */
       .metrics-grid {
@@ -1000,6 +1047,15 @@
             <span class="db-chip unconfigured" id="db-mongo"><span class="db-dot"></span>MongoDB</span>
             <span class="db-chip unconfigured" id="db-redis"><span class="db-dot"></span>Redis</span>
           </div>
+          <div class="action-console" id="actionConsole">
+            <div class="console-head">
+              <span>Service Console</span>
+              <span id="consoleStatus">ready</span>
+            </div>
+            <div class="console-body" id="consoleBody">
+              <div class="console-line muted">Waiting for service actions...</div>
+            </div>
+          </div>
         </div>
 
         <!-- Tab: Request Monitor -->
@@ -1008,7 +1064,7 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Time</th>
+                  <th>Time (UTC+7)</th>
                   <th>Method</th>
                   <th>Path</th>
                   <th>Service</th>
@@ -1089,6 +1145,8 @@
           popupGrid = document.getElementById("popupGrid"),
           ctrlToast = document.getElementById("ctrlToast"),
           reqTableBody = document.getElementById("reqTableBody");
+        var consoleBody = document.getElementById("consoleBody"),
+          consoleStatus = document.getElementById("consoleStatus");
         var logContainer = document.getElementById("logContainer");
         var logFileSel = document.getElementById("logFileSel"),
           logLevelSel = document.getElementById("logLevelSel"),
@@ -1161,6 +1219,70 @@
           if (n < 1024) return n + " B";
           if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
           return (n / 1048576).toFixed(2) + " MB";
+        }
+        function formatVietnamTime(ts) {
+          if (!ts) return "";
+          var d = new Date(ts);
+          if (isNaN(d.getTime())) return ts;
+          var parts = new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Asia/Ho_Chi_Minh",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
+          }).formatToParts(d).reduce(function(acc, part) {
+            acc[part.type] = part.value;
+            return acc;
+          }, {});
+          return parts.year + "-" + parts.month + "-" + parts.day + " " +
+            parts.hour + ":" + parts.minute + ":" + parts.second;
+        }
+        function resolveMonitorURL(svc) {
+          var monitorPath = (svc && svc.monitor_path) || "";
+          if (!monitorPath) return "";
+          try {
+            var target = new URL(svc.target);
+            var gatewayHost = window.location.hostname || target.hostname;
+            var serviceOrigin = target.protocol + "//" + gatewayHost + (target.port ? ":" + target.port : "");
+            return serviceOrigin + (monitorPath.charAt(0) === "/" ? monitorPath : "/" + monitorPath);
+          } catch (e) {
+            return monitorPath;
+          }
+        }
+        function appendConsoleLine(text, cls) {
+          if (!consoleBody) return;
+          if (consoleBody.dataset.empty !== "false") {
+            consoleBody.innerHTML = "";
+            consoleBody.dataset.empty = "false";
+          }
+          var line = document.createElement("div");
+          line.className = "console-line" + (cls ? " " + cls : "");
+          line.textContent = text;
+          consoleBody.appendChild(line);
+          consoleBody.scrollTop = consoleBody.scrollHeight;
+        }
+        function setConsoleStatus(text) {
+          if (consoleStatus) consoleStatus.textContent = text;
+        }
+        function recordServiceActionStart(service, action) {
+          var stamp = new Date().toLocaleTimeString();
+          appendConsoleLine("[" + stamp + "] $ systemctl " + action + " " + service, "cmd");
+          setConsoleStatus("running");
+        }
+        function recordServiceActionResult(data) {
+          var elapsed = Number(data.elapsed_ms || 0);
+          if (data.output) appendConsoleLine(data.output);
+          if (data.error) {
+            appendConsoleLine("error: " + data.error, "err");
+            setConsoleStatus("error");
+          } else {
+            appendConsoleLine("completed in " + elapsed + "ms", "ok");
+            setConsoleStatus("ready");
+          }
+          appendConsoleLine("");
         }
         function statusClass(c) {
           if (c >= 200 && c < 300) return "status-2xx";
@@ -1260,18 +1382,27 @@
             // Build/update service node cards
             services.forEach(function(svc){
               var s = (svc.status||"unknown").toLowerCase();
+              var monitorURL = resolveMonitorURL(svc);
               var nd = document.getElementById("svcnd-"+svc.name);
               if (nd) {
                 nd.className = "svc-node " + s;
                 nd.dataset.status = s;
+                nd.dataset.monitorUrl = monitorURL;
                 var bg = nd.querySelector(".svc-badge"); if(bg){ bg.className="svc-badge "+s; bg.textContent=svc.status||"UNKNOWN"; }
                 var lt = nd.querySelector(".svc-latency"); if(lt){ lt.textContent=svc.uptime?svc.uptime:(svc.error||""); lt.style.color=svc.error?"var(--err)":""; }
+                var mb = nd.querySelector(".monitor-btn");
+                if (mb) {
+                  mb.dataset.monitorUrl = monitorURL;
+                  mb.disabled = !monitorURL;
+                  mb.title = monitorURL || "Monitor URL not configured";
+                }
               } else {
                 var el = document.createElement("div");
                 el.className = "svc-node "+s;
                 el.id = "svcnd-"+svc.name;
                 el.dataset.status = s;
                 el.dataset.svcName = svc.name;
+                el.dataset.monitorUrl = monitorURL;
                 el.innerHTML =
                   '<div class="svc-name">'+esc(svc.name)+'</div>'+
                   '<div class="svc-prefix">'+esc(svc.prefix)+' → '+esc(svc.target)+'</div>'+
@@ -1281,10 +1412,10 @@
                     '<button class="ctrl-btn start" data-action="start" data-svc="'+esc(svc.name)+'">▶ Start</button>'+
                     '<button class="ctrl-btn stop"  data-action="stop"  data-svc="'+esc(svc.name)+'">■ Stop</button>'+
                     '<button class="ctrl-btn"       data-action="restart" data-svc="'+esc(svc.name)+'">↺ Restart</button>'+
+                    '<button class="monitor-btn" data-monitor-url="'+esc(monitorURL)+'" title="'+esc(monitorURL||"Monitor URL not configured")+'" '+(monitorURL?'':'disabled')+'>▣ Monitor</button>'+
                   '</div>';
                 // Hover: show metrics popup
-                el.addEventListener("mouseenter", function(e){ showPopup(e, this.dataset.svcName); });
-                el.addEventListener("mousemove",  function(e){ positionPopup(e); });
+                el.addEventListener("mouseenter", function(){ showPopup(this, this.dataset.svcName); });
                 el.addEventListener("mouseleave", function(){ hidePopup(); });
                 svcRow.appendChild(el);
               }
@@ -1294,8 +1425,7 @@
             var gwEl = document.getElementById("gwNode");
             if (gwEl && !gwEl._hasPopup) {
               gwEl._hasPopup = true;
-              gwEl.addEventListener("mouseenter", function(e){ showPopup(e, "gateway"); });
-              gwEl.addEventListener("mousemove",  function(e){ positionPopup(e); });
+              gwEl.addEventListener("mouseenter", function(){ showPopup(this, "gateway"); });
               gwEl.addEventListener("mouseleave", function(){ hidePopup(); });
             }
 
@@ -1308,7 +1438,7 @@
         function popupItem(label, value) {
           return '<div class="popup-item"><div class="metric-label">'+label+'</div><div class="metric-value">'+value+'</div></div>';
         }
-        function showPopup(e, name) {
+        function showPopup(anchor, name) {
           if (name === "gateway") {
             var s = cachedSysMeta;
             var m = (s.memory || {});
@@ -1332,13 +1462,15 @@
               popupItem("4xx/5xx", (svc.status_4xx||0)+"/"+(svc.status_5xx||0));
           }
           metricsPopup.style.display = "block";
-          positionPopup(e);
+          positionPopup(anchor);
         }
-        function positionPopup(e) {
+        function positionPopup(anchor) {
           var pw=metricsPopup.offsetWidth, ph=metricsPopup.offsetHeight;
-          var x=e.clientX+14, y=e.clientY-12;
-          if(x+pw>window.innerWidth-10) x=e.clientX-pw-14;
-          if(y+ph>window.innerHeight-10) y=e.clientY-ph+12;
+          var rect = anchor.getBoundingClientRect();
+          var x=rect.right+12, y=rect.top;
+          if(x+pw>window.innerWidth-10) x=rect.left-pw-12;
+          if(y+ph>window.innerHeight-10) y=window.innerHeight-ph-10;
+          if(y<10) y=10;
           metricsPopup.style.left=x+"px"; metricsPopup.style.top=y+"px";
         }
         function hidePopup() { metricsPopup.style.display="none"; }
@@ -1356,19 +1488,36 @@
 
         /* ── Service control ── */
         document.addEventListener("click", function(e){
+          var btn = e.target.closest(".monitor-btn");
+          if (!btn) return;
+          e.stopPropagation();
+          var url = btn.dataset.monitorUrl || "";
+          if (!url) {
+            showToast("Monitor URL not configured", 2500);
+            return;
+          }
+          window.open(url, "_blank", "noopener,noreferrer");
+        });
+
+        document.addEventListener("click", function(e){
           var btn = e.target.closest(".ctrl-btn");
           if (!btn) return;
           e.stopPropagation();
           var svc=btn.dataset.svc, action=btn.dataset.action;
           if (!svc||!action) return;
           btn.disabled=true;
+          recordServiceActionStart(svc, action);
           fetch(apiUrl("/gateway/api/service/"+encodeURIComponent(svc)+"/control"),{
             method:"POST",headers:{"Content-Type":"application/json"},
             body:JSON.stringify({action:action})
           }).then(function(r){ return r.json(); }).then(function(d){
+            recordServiceActionResult(d);
             showToast((d.error?"❌ ":"✅ ")+svc+" "+action+(d.output?"\n"+d.output.substring(0,200):""), d.error?4000:2500);
             setTimeout(function(){ loadServices(); loadMetrics(); }, 800);
-          }).catch(function(err){ showToast("❌ "+err,3000); }).finally(function(){ btn.disabled=false; });
+          }).catch(function(err){
+            recordServiceActionResult({ error: String(err), elapsed_ms: 0 });
+            showToast("❌ "+err,3000);
+          }).finally(function(){ btn.disabled=false; });
         });
 
         function showToast(msg, ms) {
@@ -1394,7 +1543,7 @@
               chip.textContent = label;
               var dot=document.createElement("span"); dot.className="db-dot";
               chip.insertBefore(dot, chip.firstChild);
-              chip.title = db.error||db.status;
+              chip.title = db.display_url || db.error || db.status;
             });
           } catch(e){ /* ignore */ }
         }
@@ -1440,10 +1589,7 @@
               var tr = document.createElement("tr");
               tr.dataset.sig = r.timestamp + r.method + r.path + r.status_code;
               tr.dataset.idx = idx;
-              var t = r.timestamp
-                ? r.timestamp.replace("T", " ").replace("Z", "")
-                : "";
-              var st = t.length > 19 ? t.substring(0, 19) : t;
+              var st = formatVietnamTime(r.timestamp);
               tr.innerHTML =
                 "<td>" +
                 esc(st) +
@@ -1498,7 +1644,7 @@
         function openRequestDetail(req) {
           modalTitle.textContent = "Request Detail";
           var h = '<div class="detail-grid">';
-          h += dr("Timestamp", req.timestamp || "");
+          h += dr("Timestamp", formatVietnamTime(req.timestamp));
           h += dr(
             "Method",
             '<span class="method-badge method-' +

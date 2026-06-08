@@ -40,9 +40,6 @@ func NewServiceProxy(svc config.ServiceTarget) (*ServiceProxy, error) {
 
 			// Set the Host header to the target host so downstream sees correct host
 			req.Host = targetURL.Host
-
-			// Log the proxy action
-			logger.Debugf("[Proxy] %s %s -> %s%s", req.Method, originalPath, targetURL.Host, req.URL.Path)
 		},
 		ModifyResponse: func(resp *http.Response) error {
 			// Remove hop-by-hop headers from response

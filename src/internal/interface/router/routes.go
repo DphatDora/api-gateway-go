@@ -50,7 +50,7 @@ func SetupRoutes(
 		dash.Use(handler.DashboardAuth(conf))
 		dash.GET("/gateway/dashboard", dashHandler.ServeDashboard)
 
-		ctrlHandler := handler.NewServiceControlHandler(conf)
+		ctrlHandler := handler.NewServiceControlHandler(conf, healthChecker)
 
 		dashAPI := router.Group("/gateway/api")
 		dashAPI.Use(handler.DashboardAuth(conf))

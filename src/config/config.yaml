@@ -23,14 +23,17 @@ services:
     prefix: /academy
     target: http://localhost:8046/api/v1
     healthPath: /api/v1/health
+    monitorPath: /admin/logs?token=ZHVjcGhhdGRlcHRyYWk
   - name: social-platform
     prefix: /social
     target: http://localhost:8045/api/v1
     healthPath: /api/v1/health
+    monitorPath: /admin/logs?token=ZHVjcGhhdGRlcHRyYWk
   - name: social-platform-media
     prefix: /social-media
     target: http://localhost:8044
     healthPath: /health
+    monitorPath: /admin/logs?token=ZHVjcGhhdGRlcHRyYWk
 
 redis:
   host:

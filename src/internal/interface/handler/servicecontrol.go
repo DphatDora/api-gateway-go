@@ -14,12 +14,13 @@ import (
 
 // ServiceControlHandler handles service management (start/stop/restart) and DB status checks.
 type ServiceControlHandler struct {
-	conf *config.Config
+	conf          *config.Config
+	healthChecker *gateway.HealthChecker
 }
 
 // NewServiceControlHandler creates a new service control handler.
-func NewServiceControlHandler(conf *config.Config) *ServiceControlHandler {
-	return &ServiceControlHandler{conf: conf}
+func NewServiceControlHandler(conf *config.Config, hc *gateway.HealthChecker) *ServiceControlHandler {
+	return &ServiceControlHandler{conf: conf, healthChecker: hc}
 }
 
 // allowedActions lists valid systemctl actions.
@@ -85,10 +86,15 @@ func (h *ServiceControlHandler) ControlService(c *gin.Context) {
 	elapsed := time.Since(start).Milliseconds()
 
 	result := gin.H{
-		"service":   svcName,
-		"action":    action,
-		"output":    strings.TrimSpace(string(output)),
+		"service":    svcName,
+		"action":     action,
+		"output":     strings.TrimSpace(string(output)),
 		"elapsed_ms": elapsed,
+	}
+	if h.healthChecker != nil {
+		if status, ok := h.healthChecker.CheckServiceNow(svcName); ok {
+			result["status"] = status
+		}
 	}
 	if err != nil {
 		result["error"] = err.Error()

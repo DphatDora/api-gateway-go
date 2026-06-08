@@ -21,11 +21,12 @@ import (
 
 // DBStatus holds the connection status for a single database.
 type DBStatus struct {
-	Type    string `json:"type"`
-	Name    string `json:"name"`
-	Status  string `json:"status"` // "UP", "DOWN", "UNCONFIGURED"
-	Latency int64  `json:"latency_ms"`
-	Error   string `json:"error,omitempty"`
+	Type       string `json:"type"`
+	Name       string `json:"name"`
+	Status     string `json:"status"` // "UP", "DOWN", "UNCONFIGURED"
+	Latency    int64  `json:"latency_ms"`
+	Error      string `json:"error,omitempty"`
+	DisplayURL string `json:"display_url,omitempty"`
 }
 
 // CheckPostgres tries to connect + ping a Postgres DSN.
@@ -35,6 +36,7 @@ func CheckPostgres(dsn string) DBStatus {
 		s.Status = "UNCONFIGURED"
 		return s
 	}
+	s.DisplayURL = maskConnectionString(dsn)
 	start := time.Now()
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -62,6 +64,7 @@ func CheckMongo(uri string) DBStatus {
 		s.Status = "UNCONFIGURED"
 		return s
 	}
+	s.DisplayURL = maskConnectionString(uri)
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -89,6 +92,7 @@ func CheckRedisDB(rawURL string) DBStatus {
 		s.Status = "UNCONFIGURED"
 		return s
 	}
+	s.DisplayURL = maskConnectionString(rawURL)
 	opt, err := parseRedisURL(rawURL)
 	if err != nil {
 		s.Status = "DOWN"
@@ -108,6 +112,32 @@ func CheckRedisDB(rawURL string) DBStatus {
 	s.Status = "UP"
 	s.Latency = time.Since(start).Milliseconds()
 	return s
+}
+
+func maskConnectionString(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+
+	if u, err := url.Parse(raw); err == nil && u.Scheme != "" && u.User != nil {
+		username := u.User.Username()
+		if _, hasPassword := u.User.Password(); hasPassword {
+			u.User = url.UserPassword(username, "redacted")
+		}
+		return u.String()
+	}
+
+	parts := strings.Fields(raw)
+	for i, part := range parts {
+		if strings.HasPrefix(strings.ToLower(part), "password=") {
+			parts[i] = "password=redacted"
+		}
+	}
+	if len(parts) > 0 {
+		return strings.Join(parts, " ")
+	}
+	return raw
 }
 
 func parseRedisURL(rawURL string) (*redis.Options, error) {

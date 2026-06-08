@@ -14,6 +14,7 @@ type ServiceStatus struct {
 	Name         string    `json:"name"`
 	Prefix       string    `json:"prefix"`
 	Target       string    `json:"target"`
+	MonitorPath  string    `json:"monitor_path,omitempty"`
 	Status       string    `json:"status"` // "UP" or "DOWN"
 	ResponseTime int64     `json:"response_time_ms"`
 	LastCheck    string    `json:"last_check"`
@@ -45,10 +46,11 @@ func NewHealthChecker(services []config.ServiceTarget) *HealthChecker {
 	// Initialize all services as UNKNOWN
 	for _, svc := range services {
 		hc.statuses[svc.Name] = &ServiceStatus{
-			Name:   svc.Name,
-			Prefix: svc.Prefix,
-			Target: svc.Target,
-			Status: "UNKNOWN",
+			Name:        svc.Name,
+			Prefix:      svc.Prefix,
+			Target:      svc.Target,
+			MonitorPath: svc.MonitorPath,
+			Status:      "UNKNOWN",
 		}
 	}
 
@@ -85,6 +87,32 @@ func (hc *HealthChecker) checkAll() {
 	}
 }
 
+// CheckServiceNow refreshes and returns the current status for a single service.
+func (hc *HealthChecker) CheckServiceNow(name string) (ServiceStatus, bool) {
+	var target config.ServiceTarget
+	found := false
+	for _, svc := range hc.services {
+		if svc.Name == name {
+			target = svc
+			found = true
+			break
+		}
+	}
+	if !found {
+		return ServiceStatus{}, false
+	}
+
+	hc.checkService(target)
+
+	hc.mu.RLock()
+	defer hc.mu.RUnlock()
+	status, ok := hc.statuses[name]
+	if !ok {
+		return ServiceStatus{}, false
+	}
+	return *status, true
+}
+
 func (hc *HealthChecker) checkService(svc config.ServiceTarget) {
 	// Build health check URL from target base
 	// Target is like http://localhost:8046/api/v1, healthPath is /api/v1/health
@@ -100,6 +128,7 @@ func (hc *HealthChecker) checkService(svc config.ServiceTarget) {
 	defer hc.mu.Unlock()
 
 	status := hc.statuses[svc.Name]
+	status.MonitorPath = svc.MonitorPath
 	status.ResponseTime = elapsed
 	status.LastCheck = time.Now().UTC().Format(time.RFC3339)
 
