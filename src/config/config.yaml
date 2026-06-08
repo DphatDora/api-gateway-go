@@ -29,7 +29,7 @@ services:
     healthPath: /api/v1/health
   - name: social-platform-media
     prefix: /social-media
-    target: http://localhost:8044/api/v1
+    target: http://localhost:8044
     healthPath: /health
 
 redis:
